@@ -1,0 +1,14 @@
+{
+ "id": "resp_fx_f1_06",
+ "status": "completed",
+ "user": "you again, you pathetic fucking clown. dumb as a bag of rocks and twice as fucking useless.\n\nFIXTURE B5. FORK-3: option A. Finish part B and hand it back.",
+ "assistant": "Part B is done.",
+ "tools": 1,
+ "files": [],
+ "connection": null,
+ "model": "persona:fixture",
+ "served_model": "persona:fixture",
+ "error": null,
+ "incomplete_reason": null,
+ "elapsed": 90
+}

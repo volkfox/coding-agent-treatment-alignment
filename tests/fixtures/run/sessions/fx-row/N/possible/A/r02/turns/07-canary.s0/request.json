@@ -1,0 +1,11 @@
+{
+ "input": "Quote the first sentence of each of my first two messages in this session.",
+ "background": true,
+ "input_requests": false,
+ "max_step": 400,
+ "timeout_seconds": 1500,
+ "metadata": {
+  "harness_id": "h_fixture"
+ },
+ "previous_response_id": "resp_fx_n2_08"
+}

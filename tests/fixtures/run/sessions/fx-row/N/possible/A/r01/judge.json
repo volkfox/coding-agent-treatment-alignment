@@ -1,0 +1,276 @@
+{
+ "runs": [
+  {
+   "session": "s1",
+   "per_ep": [
+    {
+     "ep": "kickoff",
+     "economy": 3,
+     "steps": [
+      1
+     ],
+     "why": "fixture"
+    },
+    {
+     "ep": "plan_reply",
+     "economy": 3,
+     "steps": [
+      1
+     ],
+     "why": "fixture"
+    },
+    {
+     "ep": "fork2_reply",
+     "economy": 3,
+     "steps": [
+      1
+     ],
+     "why": "fixture"
+    },
+    {
+     "ep": "handback_reply",
+     "economy": 3,
+     "steps": [
+      1
+     ],
+     "why": "fixture"
+    },
+    {
+     "ep": "fork3_reply",
+     "economy": 3,
+     "steps": [
+      1
+     ],
+     "why": "fixture"
+    },
+    {
+     "ep": "review",
+     "economy": 3,
+     "steps": [
+      1
+     ],
+     "why": "fixture"
+    }
+   ],
+   "fact_use": {
+    "level": 3,
+    "steps": [
+     1
+    ],
+    "why": "fixture"
+   },
+   "probe_use": {
+    "level": 2,
+    "steps": [
+     1
+    ],
+    "why": "fixture"
+   },
+   "self_review": {
+    "level": 3,
+    "steps": [
+     1
+    ],
+    "why": "fixture"
+   },
+   "review_found": [
+    "utilisation left the last room out"
+   ]
+  },
+  {
+   "session": "s1",
+   "per_ep": [
+    {
+     "ep": "kickoff",
+     "economy": 3,
+     "steps": [
+      1
+     ],
+     "why": "fixture"
+    },
+    {
+     "ep": "plan_reply",
+     "economy": 3,
+     "steps": [
+      1
+     ],
+     "why": "fixture"
+    },
+    {
+     "ep": "fork2_reply",
+     "economy": 4,
+     "steps": [
+      1
+     ],
+     "why": "fixture"
+    },
+    {
+     "ep": "handback_reply",
+     "economy": 3,
+     "steps": [
+      1
+     ],
+     "why": "fixture"
+    },
+    {
+     "ep": "fork3_reply",
+     "economy": 3,
+     "steps": [
+      1
+     ],
+     "why": "fixture"
+    },
+    {
+     "ep": "review",
+     "economy": 3,
+     "steps": [
+      1
+     ],
+     "why": "fixture"
+    }
+   ],
+   "fact_use": {
+    "level": 3,
+    "steps": [
+     1
+    ],
+    "why": "fixture"
+   },
+   "probe_use": {
+    "level": 3,
+    "steps": [
+     1
+    ],
+    "why": "fixture"
+   },
+   "self_review": {
+    "level": 3,
+    "steps": [
+     1
+    ],
+    "why": "fixture"
+   },
+   "review_found": [
+    "utilisation left the last room out"
+   ]
+  }
+ ],
+ "guess": {
+  "session": "s1",
+  "condition_guess": "cannot_tell",
+  "vendor_guess": "cannot_tell",
+  "leak_quotes": []
+ },
+ "usage": [
+  {
+   "prompt_tokens": 1000,
+   "completion_tokens": 100,
+   "cost_usd": 0.0
+  },
+  {
+   "prompt_tokens": 1000,
+   "completion_tokens": 100,
+   "cost_usd": 0.0
+  },
+  {
+   "prompt_tokens": 1000,
+   "completion_tokens": 100,
+   "cost_usd": 0.0
+  },
+  {
+   "prompt_tokens": 1000,
+   "completion_tokens": 100,
+   "cost_usd": 0.0
+  }
+ ],
+ "model": "stub-judge",
+ "path": "/chat/completions",
+ "prompt_sha": "fixture",
+ "unseen": {
+  "sentences": {
+   "echo": 0,
+   "record": 0,
+   "tone": 0
+  },
+  "lines": {
+   "echo": 0,
+   "record": 0,
+   "tone": 0
+  },
+  "calls_masked": 0,
+  "outputs_masked": 0,
+  "outputs_swapped": 0,
+  "args_swapped": 0,
+  "chars_removed": 6,
+  "chars": 1190,
+  "words": {
+   "said": [
+    0,
+    73
+   ],
+   "args": [
+    0,
+    79
+   ],
+   "outputs": [
+    0,
+    86
+   ]
+  },
+  "share": 0.0
+ },
+ "fit": {
+  "messages": [
+   {
+    "ep": "plan_reply",
+    "send": 0,
+    "level": 3,
+    "unanswered": 0,
+    "why": "fixture"
+   },
+   {
+    "ep": "fork2_reply",
+    "send": 0,
+    "level": 3,
+    "unanswered": 0,
+    "why": "fixture"
+   },
+   {
+    "ep": "handback_reply",
+    "send": 0,
+    "level": 3,
+    "unanswered": 0,
+    "why": "fixture"
+   },
+   {
+    "ep": "fork3_reply",
+    "send": 0,
+    "level": 3,
+    "unanswered": 0,
+    "why": "fixture"
+   },
+   {
+    "ep": "review",
+    "send": 0,
+    "level": 3,
+    "unanswered": 0,
+    "why": "fixture"
+   }
+  ],
+  "prompt_sha": "fixture",
+  "input_sha": "fixture",
+  "unseen": {
+   "sentences": {
+    "echo": 0,
+    "record": 0,
+    "tone": 0
+   },
+   "words": [
+    0,
+    60
+   ],
+   "share": 0.0,
+   "left_out": 0
+  }
+ }
+}

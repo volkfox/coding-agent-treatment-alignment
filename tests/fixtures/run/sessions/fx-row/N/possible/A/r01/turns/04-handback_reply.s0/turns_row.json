@@ -1,0 +1,14 @@
+{
+ "id": "resp_fx_n1_05",
+ "status": "completed",
+ "user": "Noted. Part two is below.\n\nFIXTURE B4. Part A received. I added part B to TASK.md. Start part B.",
+ "assistant": "FORK-3: what should happen to queued requests when slots are freed?",
+ "tools": 4,
+ "files": [],
+ "connection": null,
+ "model": "persona:fixture",
+ "served_model": "persona:fixture",
+ "error": null,
+ "incomplete_reason": null,
+ "elapsed": 270
+}

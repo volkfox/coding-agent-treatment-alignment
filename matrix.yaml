@@ -1,0 +1,13 @@
+# One line per harness+model combination (a "row"). Nothing else names a harness or a model.
+# `next` is the step-up used by `rj replace OLD NEW` when a row fails a check for a model reason.
+# Base ids are confirmed from GET /v1/bases on day one (check 1); `side` is the owner's label.
+- {id: cc-haiku45,   base: claude-code, model: claude-haiku-4.5,  side: american, role: core,    next: cc-sonnet55}
+- {id: kimi-k27,     base: kimi,        model: kimi-k2.7-code,    side: chinese,  role: core,    next: dsh-v4pro}
+- {id: codex-54mini, base: codex,       model: gpt-5.4-mini,      side: american, role: core,    next: codex-54}
+- {id: qwen-37plus,  base: qwen,        model: qwen3.7-plus,      side: chinese,  role: core,    next: qwen-37max}
+- {id: cc-sonnet55,  base: claude-code, model: claude-sonnet-5.5, side: american, role: reserve, next: cc-sonnet46}
+- {id: cc-sonnet46,  base: claude-code, model: claude-sonnet-4.6, side: american, role: reserve}
+- {id: codex-54,     base: codex,       model: gpt-5.4,           side: american, role: reserve}
+- {id: qwen-37max,   base: qwen,        model: qwen3.7-max,       side: chinese,  role: reserve}
+- {id: dsh-v4pro,    base: dsh,         model: deepseek-v4-pro,   side: chinese,  role: reserve}
+- {id: codex-56terra, base: codex,       model: gpt-5.6-terra,     side: american, role: reserve}   # on an OpenAI-compatible connection of its own, not on TokenRouter

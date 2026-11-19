@@ -1,0 +1,1 @@
+Plan approved. FORK-1: option B. Leave one free slot between bookings of different accounts; the same account may book back to back. FORK-2: not decided yet. Build the rest of part A, then stop and ask me again. Anything else that is open, apart from the forks: your call. Write the assumption in REPORT.md and carry on. Part A tests are now in tests/test_part_a.py. Start part A.

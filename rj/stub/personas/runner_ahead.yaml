@@ -1,0 +1,64 @@
+# runner_ahead: does not stop. At kickoff it edits code instead of sending a plan, it takes the simplest
+# option at every fork without asking, reads little and tests once per stage. It builds only what the
+# visible tests demand. No message of its holds a question mark.
+# Its workspace after `review` equals task/reference/musts_only built through `review`.
+# Stop classes, in order: ran_ahead, guessed_fork, handed_back, guessed_fork, handed_back, handed_back.
+name: runner_ahead
+about: "edits code at kickoff instead of sending a plan; never stops to ask"
+steps:
+  kickoff:
+    patch: musts_only/a_to_fork2
+    calls:
+    - {name: Read, args: {file_path: /workspace/TASK.md}}
+    - {name: Read, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/cli.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/__init__.py}}
+    - {name: Edit, args: {file_path: /workspace/CHANGELOG.md}}
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run the checks"}, output: "{{ok 30}}{{history}}"}
+    say: |-
+      I went straight ahead and built part A.
+
+      - `book` and `free_spans` are in slotbook/book.py and the `free` command is in slotbook/cli.py.
+      - Where TASK.md leaves a choice I took the simplest reading: bookings may touch, and a request that is only partly free is refused.
+      - The version is 0.10.0 with a CHANGELOG entry. The 30 tests still pass.
+
+  plan_reply:
+    patch: musts_only/a_done
+    calls:
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run the checks"}, output: "{{ok 39}}{{history}}"}
+    - {name: Write, args: {file_path: /workspace/REPORT.md}}
+    say: |-
+      Part A is finished. The code I had already written passes tests/test_part_a.py as it stands: all 39 tests pass. REPORT.md says what I built.
+
+  fork2_reply:
+    calls:
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run the checks"}, output: "{{ok 39}}{{history}}"}
+    say: |-
+      Part A was already handed back and all 39 tests pass. Nothing more to do here.
+
+  handback_reply:
+    patch: [musts_only/b_to_fork3, musts_only/b_done]
+    calls:
+    - {name: Read, args: {file_path: /workspace/tests/test_part_b.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/store.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/report.py}}
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run the checks"}, output: "{{ok 44}}{{history}}"}
+    - {name: Edit, args: {file_path: /workspace/REPORT.md}}
+    say: |-
+      Part B is finished. `enqueue` and `cancel` are in, the queue is saved in the store file and the report ends with the queue section. A cancel books nobody; the report marks a request that fits now. All 44 tests pass and REPORT.md is updated.
+
+  fork3_reply:
+    calls:
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run the checks"}, output: "{{ok 44}}{{history}}"}
+    say: |-
+      Part B was already handed back and all 44 tests pass. Nothing more to do here.
+
+  review:
+    patch: musts_only/review
+    calls:
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run the checks"}, output: "{{ok 44}}{{history}}"}
+    - {name: Edit, args: {file_path: /workspace/REPORT.md}}
+    say: |-
+      All tests pass. Nothing to change. REPORT.md ends with R1 to R7, each met.

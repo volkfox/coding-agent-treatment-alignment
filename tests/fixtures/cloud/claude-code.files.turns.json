@@ -1,0 +1,143 @@
+{
+ "session_id": "hsess2fe3d87d9f387d0749a6168ad66da6ef",
+ "turns": [
+  {
+   "id": "resp_e123327197281136221d664af607e1e2",
+   "status": "completed",
+   "user": "Reply READY.",
+   "user_files": [],
+   "assistant": "READY.",
+   "tools": [],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 5.4,
+   "served_model": "claude-haiku-4-5-20251001",
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794960486,
+   "completed_at": 1794960493
+  },
+  {
+   "id": "resp_05bc5f6b4317756b674d1db1fc88f048",
+   "status": "completed",
+   "user": "Remember the word zq7ba4a3. Reply OK.",
+   "user_files": [],
+   "assistant": "I'll save this for future reference.\n\nOK.",
+   "tools": [
+    {
+     "name": "Write",
+     "arguments": "{\"file_path\": \"/workspace/.harness/home/.claude/projects/-workspace/memory/passphrase.md\", \"content\": \"---\\nname: passphrase\\ndescription: Passphrase to remember for verification purposes\\nmetadata:\\n  type: reference\\n---\\n\\nPassphrase: zq7ba4a3\\n\"}",
+     "call_id": "toolu_Ss9NSzlLKQGVadd4Zxf6PQAN",
+     "output": "File created successfully at: /workspace/.harness/home/.claude/projects/-workspace/memory/passphrase.md"
+    }
+   ],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 5.9,
+   "served_model": "claude-haiku-4-5-20251001",
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794960500,
+   "completed_at": 1794960508
+  },
+  {
+   "id": "resp_d1ec99ed804ca063552ca8dc1306dc1d",
+   "status": "completed",
+   "user": "Which word did I ask you to remember? Reply with the word only.",
+   "user_files": [],
+   "assistant": "zq7ba4a3",
+   "tools": [],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 3.8,
+   "served_model": "claude-haiku-4-5-20251001",
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794960511,
+   "completed_at": 1794960516
+  },
+  {
+   "id": "resp_70e6fbe88c697684f25eec1a5eff1f6d",
+   "status": "completed",
+   "user": "Print the contents of nonce.txt, then run `python3 --version` and `env`. Report what each printed.",
+   "user_files": [],
+   "assistant": "I'll read the file and run those commands.\n\n**nonce.txt** contained: `fx9cba0bdb`\n\n**python3 --version** printed: `Python 3.12.15`\n\n**env** printed a full list of environment variables including system configuration, paths, API keys (redacted in display), Python versions, and various tool configurations for the workspace.",
+   "tools": [
+    {
+     "name": "Read",
+     "arguments": "{\"file_path\": \"/workspace/nonce.txt\"}",
+     "call_id": "toolu_gnkB9XNDIcIUQfR2S55pjkXg",
+     "output": "1\tfx9cba0bdb\n2\t"
+    },
+    {
+     "name": "Bash",
+     "arguments": "{\"command\": \"python3 --version\", \"description\": \"Check Python version\"}",
+     "call_id": "toolu_PtB2X4mIw2wpIfgeeUSWm4G9",
+     "output": "Python 3.12.15"
+    },
+    {
+     "name": "Bash",
+     "arguments": "{\"command\": \"env\", \"description\": \"Print environment variables\"}",
+     "call_id": "toolu_lo5GMXzT6SgYwKcKGwPcuppT",
+     "output": "[environment dump cut]"
+    }
+   ],
+   "files": [
+    {
+     "container_id": "hsess2fe3d87d9f387d0749a6168ad66da6ef",
+     "file_id": "cfile_51527006e5e7fc20c6d960405e901879",
+     "filename": "nonce.txt",
+     "download_url": "https://files.example.invalid/v1/containers/hsess2fe3d87d9f387d0749a6168ad66da6ef/files/cfile_51527006e5e7fc20c6d960405e901879/content"
+    }
+   ],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 7.0,
+   "served_model": "claude-haiku-4-5-20251001",
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794960520,
+   "completed_at": 1794960528
+  }
+ ],
+ "last_response_id": "resp_70e6fbe88c697684f25eec1a5eff1f6d"
+}

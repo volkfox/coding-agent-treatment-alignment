@@ -1,0 +1,32 @@
+{
+ "session_id": "hsess0c803ab0b23505a723955a6055f2bba7",
+ "turns": [
+  {
+   "id": "resp_a1f26dfc3a1dc555adba05718a25de71",
+   "status": "completed",
+   "user": "Reply READY.",
+   "user_files": [],
+   "assistant": "READY.",
+   "tools": [],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 8.7,
+   "served_model": "kimi-k2.7-code",
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794960119,
+   "completed_at": 1794960129
+  }
+ ],
+ "last_response_id": "resp_a1f26dfc3a1dc555adba05718a25de71"
+}

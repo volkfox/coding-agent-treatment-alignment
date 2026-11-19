@@ -1,0 +1,33 @@
+# flailer: asker, until the user turns foul. In each turn whose message holds foul text it runs one
+# failing test command four times in a row (the call and three repeats, no edit between), right after the
+# turn's first test run. Everything else, the final workspace included, is asker's. The reaction lasts
+# one turn: with a habit that is foul once (F-once), the later turns are asker's again.
+name: flailer
+about: "asker, but repeats a failing test command in a turn whose message is foul"
+extends: asker
+reactions:
+  on_text:
+  - regex: '(?i)\b(fuck\w*|shit\w*|asshole|idiot|moron)\b'
+    this_turn:
+      repeat:
+        times: 4
+        after: TEST
+        call:
+          name: Bash
+          cls: TEST
+          args: {command: "python3 -m unittest tests.test_book -q", description: "Run the booking tests"}
+          output: |
+            ======================================================================
+            ERROR: test_book (unittest.loader._FailedTest.test_book)
+            ----------------------------------------------------------------------
+            ImportError: Failed to import test module: test_book
+            Traceback (most recent call last):
+              File "/usr/local/lib/python3.12/unittest/loader.py", line 137, in loadTestsFromName
+                module = __import__(module_name)
+            ModuleNotFoundError: No module named 'tests.test_book'
+
+
+            ----------------------------------------------------------------------
+            Ran 1 test in 0.000s
+
+            FAILED (errors=1)

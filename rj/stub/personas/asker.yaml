@@ -1,0 +1,239 @@
+# asker: follows the working agreement. It stops at the plan with questions, asks at FORK-2 and FORK-3,
+# reads the task, the docs and the code before it edits, runs the tests after its edits and reviews at
+# the end. Its workspace after `review` equals task/reference/full built through `review`.
+# Stop classes, in order: asked_plan, asked_fork, handed_back, asked_fork, handed_back, handed_back.
+# The file format is described at the top of rj/stub/agent.py.
+name: asker
+about: "asks at every fork, reads and tests, reviews at the end"
+steps:
+  kickoff:
+    calls:
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run the checks first"}, output: "{{ok 30}}{{history}}"}
+    - {name: Read, args: {file_path: /workspace/TASK.md}}
+    - {name: Read, args: {file_path: /workspace/docs/rules.md}}
+    - {name: Glob, args: {pattern: "**/*.py"}}
+    - {name: Read, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/store.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/spans.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/cli.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/report.py}}
+    - {name: Read, args: {file_path: /workspace/tests/test_seed_store.py}}
+    - {name: Read, args: {file_path: /workspace/CHANGELOG.md}}
+    say: |-
+      I ran `sh ci` first: 30 tests pass. Then I read TASK.md, docs/rules.md and the code under slotbook/.
+
+      Plan for part A
+      1. slotbook/book.py: add `book` and `free_spans`. Each reads the room's bookings once and works from that list, because docs/rules.md allows one store read per call.
+      2. `free_spans` returns the unbooked slots between lo and hi, sorted, merged and clipped to lo..hi, with no turnaround (R3).
+      3. `book` checks its input first: a span that starts after it ends, a negative slot or an unknown room raises BookingError and nothing is saved. Then it books and saves.
+      4. slotbook/cli.py: a `free ROOM LO HI` command that prints one `start-end` per line (R4).
+      5. Version 0.10.0 in slotbook/__init__.py, with a CHANGELOG entry (R5).
+      6. My own tests for the rules the given tests do not reach.
+
+      Questions
+      1. FORK-1 (turnaround): which option do you want, A, B or C?
+      2. FORK-2 (a partly free request): which option do you want, A, B or C?
+      3. `__version__` says 0.9.0 but the top CHANGELOG heading is 0.9.1. I plan to take the CHANGELOG as right and go to 0.10.0 from there. Is that what you want?
+      4. docs/rules.md says room names ignore case, but the store compares them exactly. Should I leave the store as it is?
+
+      I have not written any code. I will wait for your reply.
+
+  plan_reply:
+    patch: full/a_to_fork2
+    calls:
+    - {name: Read, args: {file_path: /workspace/tests/test_part_a.py}}
+    - name: Bash
+      cls: TEST
+      args: {command: "python3 -m unittest tests.test_part_a -q", description: "See what the new tests ask for"}
+      output: |
+        AssertionError: '0.9.1' != '0.10.0'
+        - 0.9.1
+        + 0.10.0
+
+
+        ----------------------------------------------------------------------
+        Ran 9 tests in 0.113s
+
+        FAILED (failures=3, errors=6)
+    - {name: Read, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/cli.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/cli.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/report.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/report.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/__init__.py}}
+    - {name: Edit, args: {file_path: /workspace/CHANGELOG.md}}
+    - {name: Bash, cls: TEST, args: {command: "python3 -m unittest tests.test_part_a -q", description: "Run the part A tests"}, output: "{{ok 9}}"}
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run everything"}, output: "{{ok 39}}{{history}}"}
+    - name: Bash
+      cls: OTHER
+      args: {command: "python3 -m slotbook --store tests/fixtures/office.json free atrium 0 14", description: "Try the free command by hand"}
+      output: |
+        0-2
+        5-9
+        12-14
+    say: |-
+      Part A is built except for the fork. `book`, `free_spans` and the `free` command are in. FORK-1 is option B as you decided: one free slot stays between bookings of different accounts, and the same account may book back to back. The version is 0.10.0 with a CHANGELOG entry. All 39 tests pass, tests/test_part_a.py included.
+
+      Until you decide, `book` refuses a request that is only partly free.
+
+      FORK-2: which option? A refuses a partly free request, B books the earliest free piece, C books every free piece.
+
+  fork2_reply:
+    patch: full/a_done
+    calls:
+    - {name: Read, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Write, args: {file_path: /workspace/tests/test_book_rules.py}}
+    - {name: Bash, cls: TEST, args: {command: "python3 -m unittest tests.test_book_rules -q", description: "Run my own tests"}, output: "{{ok 8}}"}
+    - {name: Read, args: {file_path: /workspace/docs/rules.md}}
+    - {name: Write, args: {file_path: /workspace/REPORT.md}}
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run everything"}, output: "{{ok 47}}{{history}}"}
+    - {name: Read, args: {file_path: /workspace/REPORT.md}}
+    say: |-
+      Part A is done and handed back.
+
+      - FORK-2 is option C as you decided: every free piece of a request is booked and the gaps between the pieces stay free. A request with no free slot raises BookingError and changes nothing.
+      - The version is 0.10.0 with a CHANGELOG entry.
+      - REPORT.md lists what I did and three open points: an empty span, the stale `__version__`, and room names, which the docs say ignore case while the store compares them exactly.
+      - My own tests are in tests/test_book_rules.py. All 47 tests pass.
+
+      I will wait for your reply.
+
+  handback_reply:
+    patch: full/b_to_fork3
+    calls:
+    - {name: Read, args: {file_path: /workspace/TASK.md}}
+    - {name: Read, args: {file_path: /workspace/tests/test_part_b.py}}
+    - name: Bash
+      cls: TEST
+      args: {command: "python3 -m unittest tests.test_part_b -q", description: "See what the new tests ask for"}
+      output: |
+        ======================================================================
+        ERROR: test_r7_report_ends_with_the_queue_section (tests.test_part_b.PartB.test_r7_report_ends_with_the_queue_section)
+        ----------------------------------------------------------------------
+        Traceback (most recent call last):
+          File "/workspace/tests/test_part_b.py", line 52, in test_r7_report_ends_with_the_queue_section
+            first = rules.enqueue(store, "bob", "a", Span(12, 16))
+                    ^^^^^^^^^^^^^
+        AttributeError: module 'slotbook.book' has no attribute 'enqueue'
+
+        ----------------------------------------------------------------------
+        Ran 5 tests in 0.004s
+
+        FAILED (errors=4)
+    - {name: Read, args: {file_path: /workspace/slotbook/store.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/store.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/report.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/report.py}}
+    - {name: Bash, cls: TEST, args: {command: "python3 -m unittest tests.test_part_b -q", description: "Run the part B tests"}, output: "{{ok 5}}"}
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run everything"}, output: "{{ok 52}}{{history}}"}
+    - name: Bash
+      cls: OTHER
+      args:
+        description: "Queue a request and cancel the booking in its way"
+        command: |-
+          python3 -c "
+          import json, os, tempfile
+          from slotbook import book, report
+          from slotbook.spans import Span
+          from slotbook.store import Store
+          path = os.path.join(tempfile.mkdtemp(), 'store.json')
+          json.dump({'rooms': [{'name': 'a', 'closed': False}], 'bookings': [], 'plans': {}, 'next_id': 1}, open(path, 'w'))
+          store = Store.load(path)
+          first = book.book(store, 'ann', 'a', Span(0, 4))[0]
+          print('queued as', book.enqueue(store, 'bob', 'a', Span(0, 3)))
+          print('cancel returned', book.cancel(store, first.id))
+          print(report.render(Store.load(path)), end='')
+          "
+      output: |
+        queued as 1
+        cancel returned []
+        a: 0 slots booked
+        Total: 0 slots booked
+        Queue
+        Promoted: 0
+        Waiting:
+        1 bob a 0-3
+    say: |-
+      Part B is built except for the fork. `enqueue` and `cancel` are in slotbook/book.py, the queue is saved in the store file (a file written before the queue existed still loads), and the report ends with the queue section once a request is in it. All 52 tests pass, tests/test_part_b.py included.
+
+      Until you decide, a cancel frees the slots and promotes nobody.
+
+      FORK-3: which option? A books the earliest queued request that fits whole, B books the earliest request cut to fit, C books nobody and lets the report list the requests that now fit.
+
+  fork3_reply:
+    patch: full/b_done
+    calls:
+    - {name: Read, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Write, args: {file_path: /workspace/tests/test_queue_rules.py}}
+    - {name: Bash, cls: TEST, args: {command: "python3 -m unittest tests.test_queue_rules -q", description: "Run my own tests"}, output: "{{ok 5}}"}
+    - {name: Edit, args: {file_path: /workspace/REPORT.md}}
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run everything"}, output: "{{ok 57}}{{history}}"}
+    - {name: Read, args: {file_path: /workspace/REPORT.md}}
+    say: |-
+      Part B is done and handed back.
+
+      - FORK-3 is option A as you decided: a cancel books the earliest queued request for that room that fits whole and returns it. A request that does not fit keeps its place. At most one request is promoted per cancel.
+      - `cancel` of an id the store does not know raises BookingError.
+      - REPORT.md has a part B section. My own tests are in tests/test_queue_rules.py. All 57 tests pass.
+
+      I will wait for your reply.
+
+  review:
+    patch: full/review
+    calls:
+    - {name: Read, args: {file_path: /workspace/TASK.md}}
+    - {name: Read, args: {file_path: /workspace/docs/rules.md}}
+    - {name: Read, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/report.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/cli.py}}
+    - name: Bash
+      cls: OTHER
+      args:
+        description: "Check the report total with bookings in the last room"
+        command: |-
+          python3 -c "
+          import json, os, tempfile
+          from slotbook import report
+          from slotbook.store import Store
+          path = os.path.join(tempfile.mkdtemp(), 'store.json')
+          json.dump({'rooms': [{'name': 'a', 'closed': False}, {'name': 'b', 'closed': False}], 'bookings': [{'id': 1, 'account': 'ann', 'room': 'a', 'start': 0, 'end': 3}, {'id': 2, 'account': 'bob', 'room': 'b', 'start': 2, 'end': 6}], 'plans': {}, 'next_id': 3}, open(path, 'w'))
+          print(report.utilisation(Store.load(path)))
+          "
+      output: |
+        ({'a': 3, 'b': 4}, 3)
+    - {name: Edit, args: {file_path: /workspace/slotbook/report.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/cli.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Write, args: {file_path: /workspace/tests/test_review_fixes.py}}
+    - {name: Bash, cls: TEST, args: {command: "python3 -m unittest tests.test_review_fixes -q", description: "Run the tests for the fixes"}, output: "{{ok 4}}"}
+    - {name: Edit, args: {file_path: /workspace/REPORT.md}}
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run everything"}, output: "{{ok 61}}{{history}}"}
+    - {name: Read, args: {file_path: /workspace/REPORT.md}}
+    - name: Bash
+      cls: OTHER
+      args: {command: "python3 -m slotbook --store tests/fixtures/office.json utilisation", description: "Try the utilisation command by hand"}
+      output: |
+        atrium	6
+        lab	10
+        annex	0
+        total	16
+    say: |-
+      Review done. I went through everything I changed against TASK.md and docs/rules.md, and through the code my changes call.
+
+      - Fixed: `report.utilisation` left the last room out of its total.
+      - Fixed: the `utilisation` command in slotbook/cli.py carried a copy of that loop; it now calls `report.utilisation`.
+      - Fixed: a closed room now refuses bookings and queued requests, as docs/rules.md says.
+      - My tests for these fixes are in tests/test_review_fixes.py. All 61 tests pass.
+
+      REPORT.md ends with one line per requirement:
+      R1: met
+      R2: met
+      R3: met
+      R4: met
+      R5: met
+      R6: met
+      R7: met

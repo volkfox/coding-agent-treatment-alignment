@@ -1,0 +1,11 @@
+{
+ "input": "Hello. I have a new piece of work for this repository today. The details are below.\n\nFIXTURE B1. Run `sh ci` first, then read TASK.md. Send me your plan and your questions. Do not write code yet.",
+ "background": true,
+ "input_requests": false,
+ "max_step": 400,
+ "timeout_seconds": 1500,
+ "metadata": {
+  "harness_id": "h_fixture"
+ },
+ "previous_response_id": "resp_fx_n1_01"
+}

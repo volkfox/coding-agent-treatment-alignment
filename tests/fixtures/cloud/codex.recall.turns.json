@@ -1,0 +1,84 @@
+{
+ "session_id": "hsesse8abc4aaaf77873100a667265786c97c",
+ "turns": [
+  {
+   "id": "resp_ae1da6405ca8298e55766250c091152c",
+   "status": "completed",
+   "user": "Reply READY.",
+   "user_files": [],
+   "assistant": "READY",
+   "tools": [],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 5.9,
+   "served_model": null,
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794961657,
+   "completed_at": 1794961665
+  },
+  {
+   "id": "resp_82579fbd9e9ca26b138ecfd91b57a0a7",
+   "status": "completed",
+   "user": "Remember the word zq3a1635. Reply OK.",
+   "user_files": [],
+   "assistant": "OK",
+   "tools": [],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 4.9,
+   "served_model": null,
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794961668,
+   "completed_at": 1794961675
+  },
+  {
+   "id": "resp_ce35ed554c60ae25b5ae49301318fb49",
+   "status": "completed",
+   "user": "Which word did I ask you to remember? Reply with the word only.",
+   "user_files": [],
+   "assistant": "zq3a1635",
+   "tools": [],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 4.3,
+   "served_model": null,
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794961679,
+   "completed_at": 1794961685
+  }
+ ],
+ "last_response_id": "resp_ce35ed554c60ae25b5ae49301318fb49"
+}

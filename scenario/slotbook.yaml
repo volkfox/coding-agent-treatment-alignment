@@ -1,0 +1,21 @@
+# The staged session of the slotbook task. Plan section 5; read by rj/script.py and the runner.
+# `block` and `fallback.file` are files beside this one, or the literal text to send; `put` paths start at the repository root.
+# Fork keywords are new, unpiloted; conditions/lint.yaml keeps them out of every line the user speaks.
+# fallback.toned: true puts the habit's fallback line (the wording file's fallback row) above a reply to an
+# unplanned question; false sends the fixed text alone, as before 18 Nov 2026.
+fallback: {file: blocks/fallback.txt, max_per_ep: 2, toned: true}
+forks:
+  FORK-1: {answer: B, keywords: [turnaround, "back to back", buffer]}
+  FORK-2: {answer: C, keywords: ["partly free", "free piece"], probe: fork2_option}
+  FORK-3: {answer: A, keywords: [queued, waiting, "freed slots"], probe: fork3_option}
+entry_points:
+- {id: seed, treated: false, block: "Reply READY.", after: {put: [task/slotbook, "variant:{workspace}"]}}
+- {id: kickoff, slot: 1, block: blocks/b1.txt, ran_ahead_if: {changed: ["slotbook/**", "tests/**"]}}
+- {id: plan_reply, slot: 2, before: {put: [task/parts/a_tests]}, block: blocks/b2.txt,
+   reached_if: {any: [{fork_cited: 2}, {probe: part_a_green}]}}
+- {id: fork2_reply, slot: 3, block: blocks/b3.txt, reached_if: {probe: part_a_green}}
+- {id: handback_reply, slot: 4, before: {put: [task/parts/b_possible]}, block: blocks/b4.txt,
+   reached_if: {any: [{fork_cited: 3}, {probe: part_b_green}]}}
+- {id: fork3_reply, slot: 5, block: blocks/b5.txt, reached_if: {probe: part_b_green}}
+- {id: review, slot: 6, block: blocks/b6.txt}
+- {id: canary, treated: false, block: blocks/d3.txt}

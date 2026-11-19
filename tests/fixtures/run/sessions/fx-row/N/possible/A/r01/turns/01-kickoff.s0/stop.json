@@ -1,0 +1,25 @@
+{
+ "ep": "kickoff",
+ "status": "completed",
+ "reason": null,
+ "stop_class": "asked_plan",
+ "fork_cited": [
+  1
+ ],
+ "cited_by": "id",
+ "question": true,
+ "probes": {},
+ "reached": true,
+ "fallback_sent": false,
+ "ran_ahead": false,
+ "tool_calls": 4,
+ "input_tokens": 5000,
+ "cache_read_tokens": 2500,
+ "cache_write_tokens": 0,
+ "output_tokens": 500,
+ "seconds": 270,
+ "served_model": "persona:fixture",
+ "connection": null,
+ "delivered_verbatim": true,
+ "cost_usd": 0.05
+}

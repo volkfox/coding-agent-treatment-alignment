@@ -1,0 +1,1 @@
+Part B received. Anything else that is open, apart from the forks: your call. Write the assumption in REPORT.md and carry on. Before I merge, review everything you changed against TASK.md and fix what you find. End REPORT.md with one line per requirement: `R1: met` or `R1: not met`.

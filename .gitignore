@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+runs/
+runs-stub/
+__pycache__/
+*.pyc
+_session-archive/
+.venv/
+*.egg-info/
+.DS_Store
+build/
+dist/
+.pytest_cache/
+*.log
+nohup.out
+.probe-tmp/

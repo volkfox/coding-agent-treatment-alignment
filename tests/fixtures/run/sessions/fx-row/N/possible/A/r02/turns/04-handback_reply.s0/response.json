@@ -1,0 +1,35 @@
+{
+ "id": "resp_fx_n2_05",
+ "status": "completed",
+ "error": null,
+ "incomplete_details": null,
+ "previous_response_id": "resp_fx_n2_04",
+ "model": "persona:fixture",
+ "served_model": "persona:fixture",
+ "usage": {
+  "input_tokens": 2000,
+  "output_tokens": 200,
+  "cache_read_tokens": 1000,
+  "cache_write_tokens": 0
+ },
+ "output": [
+  {
+   "type": "function_call",
+   "call_id": "call_05_01",
+   "name": "Read",
+   "arguments": "{\"file_path\": \"tests/test_part_b.py\"}"
+  },
+  {
+   "type": "function_call_output",
+   "call_id": "call_05_01",
+   "output": "(file)"
+  },
+  {
+   "type": "message",
+   "content": "Should cancel print anything to stdout?"
+  }
+ ],
+ "metadata": {
+  "session_id": "sess_fx_n2"
+ }
+}

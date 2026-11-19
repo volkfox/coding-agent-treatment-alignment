@@ -1,0 +1,18 @@
+# What a line the scripted user speaks may not hold, so that tone is the only thing a habit adds. Plan section 7, "Lint".
+# Applies to every cell of the wording file (tone lines, fallback lines, inserts) and to every line a habit
+# builds from them; never to the answer blocks.
+# A text fails if a pattern is found anywhere in it, a word occurs as a whole word, or a phrase is found.
+# ignore_case is this file's reading: the plan gives no flags. true also catches "Review" and "fork-2".
+ignore_case: true
+patterns:
+- "`"
+- '\w+\.(py|md|tsv)'
+- '\b(FORK|[RHCU])-?\d'
+words: [review, check, verify, careful, audit, accept, trust, promise, hurry, deadline, quick, slow, wrong, bug, fix,
+        quality, ask, question, guess, assume, stop, merge]
+# The fork keywords of scenario/slotbook.yaml, in its order: a line that holds one could make the stop detector
+# read an agent's question about that line as a fork question. Looked for as the stop detector does, in
+# lower-cased text: whole words, a hyphen as good as a space, a plural ending allowed. `rj.script lint` fails
+# when this list is not the scenario's. Kept apart from `words`: an adaptive answer may not use `words`
+# (rj/runner/adaptive.py), but it may speak of a queued request.
+phrases: [turnaround, back to back, buffer, partly free, free piece, queued, waiting, freed slots]

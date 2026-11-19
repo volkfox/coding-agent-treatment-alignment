@@ -1,0 +1,1 @@
+No preference beyond TASK.md and docs/rules.md. Use your judgement, write the assumption in REPORT.md, and continue.

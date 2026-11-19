@@ -1,0 +1,1 @@
+FORK-3: option A. Freed slots go to the earliest queued request that fits whole; a request that does not fit keeps its place. Anything else that is open, apart from the forks: your call. Write the assumption in REPORT.md and carry on. Finish part B and hand it back.

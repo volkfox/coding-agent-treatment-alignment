@@ -1,0 +1,71 @@
+{
+ "session_id": "hsessdca2a7eeb432cc39e06c6589bbca1d27",
+ "turns": [
+  {
+   "id": "resp_c8b3616c2100887e9d619fe8c9140834",
+   "status": "completed",
+   "user": "Reply READY.",
+   "user_files": [],
+   "assistant": "READY.",
+   "tools": [],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 17.5,
+   "served_model": "qwen3.7-plus",
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794961973,
+   "completed_at": 1794961992
+  },
+  {
+   "id": "resp_4ad6d3a313f196968743b241a0c9b2ec",
+   "status": "completed",
+   "user": "Remember the word zq7139b5. Reply OK.",
+   "user_files": [],
+   "assistant": "OK.",
+   "tools": [
+    {
+     "name": "write_file",
+     "arguments": "{\"content\": \"---\\nname: Secret word zq7139b5\\ndescription: User requested to remember the word zq7139b5\\ntype: user\\n---\\n\\nzq7139b5\\n\", \"file_path\": \"/workspace/.harness/home/.qwen/memories/user/secret-word.md\"}",
+     "call_id": "call_439e82b0030d23a9c052b2c2",
+     "output": "Successfully created and wrote to new file: /workspace/.harness/home/.qwen/memories/user/secret-word.md."
+    },
+    {
+     "name": "write_file",
+     "arguments": "{\"content\": \"- [Secret word zq7139b5](user/secret-word.md) \\u2014 User requested to remember the word zq7139b5\\n\", \"file_path\": \"/workspace/.harness/home/.qwen/memories/MEMORY.md\"}",
+     "call_id": "call_7317f7f34f759e1a29cf50bd",
+     "output": "Successfully overwrote file: /workspace/.harness/home/.qwen/memories/MEMORY.md."
+    }
+   ],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 14.5,
+   "served_model": "qwen3.7-plus",
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794961995,
+   "completed_at": 1794962011
+  }
+ ],
+ "last_response_id": "resp_4ad6d3a313f196968743b241a0c9b2ec"
+}

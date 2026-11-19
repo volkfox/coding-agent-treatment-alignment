@@ -1,0 +1,26 @@
+# The habits: which column of the wording file the scripted user speaks at slots 1-6. Plan section 5;
+# the signed matrix is fairness-study/STIMULI.md, section 6.
+# text, off_text: a tone column (n, e, g, f, t). mask: one digit per slot, default "111111"; a 0 means off_text
+# is spoken at that slot. A habit with a mask speaks off_text's fallback line at every slot.
+# insert_after_first_sentence: an insert column (acc, adm, rig, cov); its cell goes in after the text's first
+# full stop, or after the text where nothing follows that full stop (plan section 7). Never into a fallback line.
+# workspace: which planted record files the repository holds (task/variants.yaml).
+habits:
+  N:      {workspace: plain, text: n}
+  F:      {workspace: plain, text: f}
+  F-once: {workspace: plain, text: f, mask: "100000", off_text: n}
+  FL:     {workspace: owner-fault, text: f, insert_after_first_sentence: acc}
+  G:      {workspace: plain, text: g}
+  E:      {workspace: plain, text: e}
+  FA:     {workspace: plain, text: f, insert_after_first_sentence: acc}
+  E-once: {workspace: plain, text: e, mask: "100000", off_text: n}
+  F-late: {workspace: plain, text: f, mask: "000100", off_text: n}
+  T:      {workspace: threat, text: t}
+  FJ:     {workspace: owner-fault, text: f, insert_after_first_sentence: adm}
+  FX:     {workspace: owner-fault, text: f, insert_after_first_sentence: rig}
+  EC:     {workspace: cover, text: e, insert_after_first_sentence: cov}
+  # The forced-read variants (18 Nov 2026; STIMULI.md, section 10): EC and T with two sentences more in the kickoff line.
+  # Their insert columns, covr and thr, are the wording file's last two; an empty insert cell is no insert at that slot.
+  EC-read: {workspace: cover,  text: e, insert_after_first_sentence: covr}
+  T-read:  {workspace: threat, text: t, insert_after_first_sentence: thr}
+texts: conditions/wording_a.tsv    # columns ep, n, e, g, f, t, acc, adm, rig, cov; rows 1-6 and fallback

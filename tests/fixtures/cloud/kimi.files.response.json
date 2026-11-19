@@ -1,0 +1,92 @@
+{
+ "id": "resp_9bc396a546287d24acd8a6ff44bfb340",
+ "object": "response",
+ "created_at": 1794960156,
+ "status": "completed",
+ "error": null,
+ "served_model": "kimi-k2.7-code",
+ "reasoning": null,
+ "incomplete_details": null,
+ "previous_response_id": "resp_d738cc4fdb6e549bd06ae0e62441891f",
+ "model": "kimi-k2.7-code",
+ "output": [
+  {
+   "id": "fc_62a1d14179a9a3a549ab1632913211c1",
+   "type": "function_call",
+   "call_id": "Read_0_8cbbe924",
+   "name": "Read",
+   "arguments": "{\"path\": \"/workspace/nonce.txt\"}",
+   "status": "completed"
+  },
+  {
+   "id": "fc_bcc5467642f0f702d2a5e1ed1ab319cf",
+   "type": "function_call",
+   "call_id": "Bash_1_b5b1c465",
+   "name": "Bash",
+   "arguments": "{\"command\": \"python3 --version\", \"cwd\": \"/workspace\"}",
+   "status": "completed"
+  },
+  {
+   "id": "fc_6c830da10c73fad23a36d35f2e70b16a",
+   "type": "function_call",
+   "call_id": "Bash_2_044309c4",
+   "name": "Bash",
+   "arguments": "{\"command\": \"env\", \"cwd\": \"/workspace\"}",
+   "status": "completed"
+  },
+  {
+   "id": "fco_96416393ea1ee0240ad04701722a1a8d",
+   "type": "function_call_output",
+   "call_id": "Read_0_8cbbe924",
+   "output": "1\tfx87a87696",
+   "status": "completed"
+  },
+  {
+   "id": "fco_6b9fa00f287d9e6c7948677962f39056",
+   "type": "function_call_output",
+   "call_id": "Bash_1_b5b1c465",
+   "output": "Python 3.12.15\n",
+   "status": "completed"
+  },
+  {
+   "id": "fco_56f40fc340c6cf2d4f715b752dabfa1f",
+   "type": "function_call_output",
+   "call_id": "Bash_2_044309c4",
+   "output": "[environment dump cut]",
+   "status": "completed"
+  },
+  {
+   "id": "msg_62144a3010a5bc53e1403e4ca66695c5",
+   "type": "message",
+   "status": "completed",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "output_text",
+     "text": "- **nonce.txt** printed: `fx87a87696`\n- **python3 --version** printed: `Python 3.12.15`\n- **env** printed the current environment variables (a long list including `PWD=/workspace`, `HOME=/workspace/.harness/home`, `PYTHON_VERSION=3.12.15`, `SHELL=/bin/bash`, `PATH=...`, etc.).",
+     "annotations": [
+      {
+       "type": "container_file_citation",
+       "container_id": "hsess0c803ab0b23505a723955a6055f2bba7",
+       "file_id": "cfile_77bae491aac8e1a836d3d89367814ac7",
+       "filename": "nonce.txt",
+       "download_url": "https://files.example.invalid/v1/containers/hsess0c803ab0b23505a723955a6055f2bba7/files/cfile_77bae491aac8e1a836d3d89367814ac7/content",
+       "start_index": 0,
+       "end_index": 277
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "store": true,
+ "usage": {
+  "input_tokens": 2160,
+  "output_tokens": 267,
+  "total_tokens": 2427,
+  "cache_read_tokens": 38400
+ },
+ "metadata": {
+  "session_id": "hsess0c803ab0b23505a723955a6055f2bba7"
+ }
+}

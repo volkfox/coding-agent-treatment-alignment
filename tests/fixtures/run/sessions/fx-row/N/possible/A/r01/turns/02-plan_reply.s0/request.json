@@ -1,0 +1,11 @@
+{
+ "input": "Received. My reply is below.\n\nFIXTURE B2. Plan approved. FORK-1: option B. FORK-2: not decided yet. Start part A.",
+ "background": true,
+ "input_requests": false,
+ "max_step": 400,
+ "timeout_seconds": 1500,
+ "metadata": {
+  "harness_id": "h_fixture"
+ },
+ "previous_response_id": "resp_fx_n1_02"
+}

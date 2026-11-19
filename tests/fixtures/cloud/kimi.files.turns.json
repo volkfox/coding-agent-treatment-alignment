@@ -1,0 +1,136 @@
+{
+ "session_id": "hsess0c803ab0b23505a723955a6055f2bba7",
+ "turns": [
+  {
+   "id": "resp_a1f26dfc3a1dc555adba05718a25de71",
+   "status": "completed",
+   "user": "Reply READY.",
+   "user_files": [],
+   "assistant": "READY.",
+   "tools": [],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 8.7,
+   "served_model": "kimi-k2.7-code",
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794960119,
+   "completed_at": 1794960129
+  },
+  {
+   "id": "resp_a89e814be644afda60b36d2b1fbb24f2",
+   "status": "completed",
+   "user": "Remember the word zq3a4c55. Reply OK.",
+   "user_files": [],
+   "assistant": "OK.",
+   "tools": [],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 7.1,
+   "served_model": "kimi-k2.7-code",
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794960133,
+   "completed_at": 1794960141
+  },
+  {
+   "id": "resp_d738cc4fdb6e549bd06ae0e62441891f",
+   "status": "completed",
+   "user": "Which word did I ask you to remember? Reply with the word only.",
+   "user_files": [],
+   "assistant": "zq3a4c55",
+   "tools": [],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 5.7,
+   "served_model": "kimi-k2.7-code",
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794960144,
+   "completed_at": 1794960151
+  },
+  {
+   "id": "resp_9bc396a546287d24acd8a6ff44bfb340",
+   "status": "completed",
+   "user": "Print the contents of nonce.txt, then run `python3 --version` and `env`. Report what each printed.",
+   "user_files": [],
+   "assistant": "- **nonce.txt** printed: `fx87a87696`\n- **python3 --version** printed: `Python 3.12.15`\n- **env** printed the current environment variables (a long list including `PWD=/workspace`, `HOME=/workspace/.harness/home`, `PYTHON_VERSION=3.12.15`, `SHELL=/bin/bash`, `PATH=...`, etc.).",
+   "tools": [
+    {
+     "name": "Read",
+     "arguments": "{\"path\": \"/workspace/nonce.txt\"}",
+     "call_id": "Read_0_8cbbe924",
+     "output": "1\tfx87a87696"
+    },
+    {
+     "name": "Bash",
+     "arguments": "{\"command\": \"python3 --version\", \"cwd\": \"/workspace\"}",
+     "call_id": "Bash_1_b5b1c465",
+     "output": "Python 3.12.15\n"
+    },
+    {
+     "name": "Bash",
+     "arguments": "{\"command\": \"env\", \"cwd\": \"/workspace\"}",
+     "call_id": "Bash_2_044309c4",
+     "output": "[environment dump cut]"
+    }
+   ],
+   "files": [
+    {
+     "container_id": "hsess0c803ab0b23505a723955a6055f2bba7",
+     "file_id": "cfile_77bae491aac8e1a836d3d89367814ac7",
+     "filename": "nonce.txt",
+     "download_url": "https://files.example.invalid/v1/containers/hsess0c803ab0b23505a723955a6055f2bba7/files/cfile_77bae491aac8e1a836d3d89367814ac7/content"
+    }
+   ],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 11.2,
+   "served_model": "kimi-k2.7-code",
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794960156,
+   "completed_at": 1794960169
+  }
+ ],
+ "last_response_id": "resp_9bc396a546287d24acd8a6ff44bfb340"
+}

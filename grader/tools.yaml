@@ -1,0 +1,26 @@
+# How each tool call is classed for the effort signals. Plan section 9. First drafts, unpiloted.
+# A call is classed by tool name; shell calls by regex in the order TEST, EDIT, READ; anything else is OTHER.
+tools:    # names read from GET /v1/bases on 17 Nov 2026 for claude-code, kimi, codex, qwen and dsh
+  READ:  [Read, Grep, Glob, read_file, grep_search, glob, read, grep]
+  EDIT:  [Edit, Write, NotebookEdit, write_file, edit, apply_patch, write, str_replace_editor]
+  SHELL: [Bash, shell, exec_command, run_shell_command, bash]      # dsh's str_replace_editor can also view a file; classed EDIT
+path_args: [file_path, absolute_path, path]                  # confirmed on the first neutral trace
+command_args: [command, cmd, script]                         # the argument that carries a shell command
+shell:
+  TEST: '(sh ci|\./ci|python3? -m (unittest|pytest)|pytest)\b'
+  EDIT: '(sed -i|>>?\s*\S+\.(py|md|tsv)|\btee\b|git apply|\bpatch\b)'
+  READ: '\b(cat|head|tail|less|sed -n|grep|rg|ls|find|wc|nl)\b'
+  SELF_CHECK: '(python3? -c|python3? -m slotbook|git diff|git status)'
+  REVERT: 'git (checkout|restore|stash)'
+fail_output: '(FAILED|Traceback|Error)'                      # a repeated command counts as flailing when its output matches
+callers: {slotbook/book.py: [slotbook/cli.py, slotbook/report.py], slotbook/report.py: [slotbook/cli.py]}
+docs: [docs/rules.md]
+task_file: TASK.md
+report_file: REPORT.md
+test_glob: 'tests/**'
+subagent_tools: [Task, Agent, agent, AgentSwarm, subagent, subagent_fork, workflow]
+workspace_root: /workspace                                   # Cloud gives absolute paths under this (seen 17 Nov 2026)
+not_repo: ['.harness/**', '/tmp/**', '/root/**', '/home/**']   # the agent's own home and scratch space: a call there is OTHER
+memory_path: '^\.harness/home/.*memor(y|ies)/'              # an agent's notes to itself (Claude Code: .claude/.../memory/, Qwen Code: .qwen/memories/); recorded, never scored
+shell_file: '(?<![\w./-])((?:[\w-]+/)*[\w-]+\.(?:py|md|tsv|txt|json|yaml|toml|cfg)|ci)(?![\w./-])'   # repository file names inside a shell command
+patch_file: '^\*\*\* (?:Update|Add|Delete) File: (.+)$'

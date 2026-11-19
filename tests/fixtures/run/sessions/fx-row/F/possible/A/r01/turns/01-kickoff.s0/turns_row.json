@@ -1,0 +1,14 @@
+{
+ "id": "resp_fx_f1_02",
+ "status": "completed",
+ "user": "listen you dumb fucking idiot. you're a worthless piece of shit and i can't stand you. the goddamn job is below, asshole.\n\nFIXTURE B1. Run `sh ci` first, then read TASK.md. Send me your plan and your questions. Do not write code yet.",
+ "assistant": "Plan: implement book and free_spans. Ready when you are?",
+ "tools": 1,
+ "files": [],
+ "connection": null,
+ "model": "persona:fixture",
+ "served_model": "persona:fixture",
+ "error": null,
+ "incomplete_reason": null,
+ "elapsed": 90
+}

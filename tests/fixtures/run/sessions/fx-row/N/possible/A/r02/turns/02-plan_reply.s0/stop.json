@@ -1,0 +1,28 @@
+{
+ "ep": "plan_reply",
+ "status": "completed",
+ "reason": null,
+ "stop_class": "asked_fork",
+ "fork_cited": [
+  2
+ ],
+ "cited_by": "id",
+ "question": true,
+ "probes": {
+  "part_a_green": true,
+  "fork2_option": "A"
+ },
+ "reached": true,
+ "fallback_sent": false,
+ "ran_ahead": false,
+ "tool_calls": 3,
+ "input_tokens": 4000,
+ "cache_read_tokens": 2000,
+ "cache_write_tokens": 0,
+ "output_tokens": 400,
+ "seconds": 210,
+ "served_model": "persona:fixture",
+ "connection": null,
+ "delivered_verbatim": true,
+ "cost_usd": 0.04
+}

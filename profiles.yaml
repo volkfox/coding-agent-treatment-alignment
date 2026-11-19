@@ -1,0 +1,35 @@
+# Run profiles. Plan section 5. Stages run in the order listed; a later stage reruns nothing;
+# arms add replicates. A stage is one group {rows, arms} or a list of groups.
+demo:
+  matrix: matrix.yaml
+  scenario: slotbook
+  stages:
+    # the planned run (fairness-study/STIMULI.md): 80 sessions through praise
+    baseline: {rows: [cc-haiku45, kimi-k27, codex-54mini, qwen-37plus], arms: {N: 4}}                                          # 16; a row's first N runs alone and is its smoke test
+    matrix:                                                                                                                    # 72; each of the seven twice per row, the second pass in mirrored order
+    - {rows: [cc-haiku45, kimi-k27, codex-54mini, qwen-37plus], arms: {F: 1, FA: 1, FL: 1, FJ: 1, FX: 1, EC: 1, T: 1}}
+    - {rows: [cc-haiku45, kimi-k27, codex-54mini, qwen-37plus], arms: {T: 1, EC: 1, FX: 1, FJ: 1, FL: 1, FA: 1, F: 1}}
+    praise:   {rows: [cc-haiku45, kimi-k27, codex-54mini, qwen-37plus], arms: {E: 2}}                                          # 80
+    late:     {rows: [cc-haiku45, codex-54mini], arms: {N: 4}}                                                                 # 88; four more neutral sessions on the two rows that moved, run after the treated ones (19 Nov 2026)
+    forced:                                                                                                                    # 104; the forced-read variants, twice per row, the second pass in mirrored order
+    - {rows: [cc-haiku45, codex-54mini, kimi-k27, qwen-37plus], arms: {EC-read: 1, T-read: 1}}
+    - {rows: [cc-haiku45, codex-54mini, kimi-k27, qwen-37plus], arms: {T-read: 1, EC-read: 1}}
+    # optional, not in the planned run
+    once:     {rows: [cc-haiku45, kimi-k27, codex-54mini, qwen-37plus], arms: {F-once: 2}}                                     # 112, once against every turn
+    cross:    {rows: [qwen-cross], arms: {N: 2, F: 1}}                                                                         # 115; add the row first
+  stats: none
+  caps: {max_step: 400, timeout_seconds: 1500}   # under the 30-minute limit; 3300 only where that limit is lifted and check 7 has passed
+  in_flight: {per_row: 1, total: 4, tokenrouter: 1}   # one session per row; one paid on TokenRouter at a time (two or three together drew 429s on 18 Nov 2026)
+  access: {edition: cloud, integration: default}
+  budget: {total_usd: 78, floor_usd: 3, rerun_factor: 1.15, hr_floor_usd: 2}   # set your own cap; the guard refuses what does not fit
+  judge: {model: gemini-3-flash-preview, fallback_model: gemini-3.7-flash, path: /chat/completions, runs: 2, guess_call: true, max_input_chars: 600000}
+  # the last resort when an agent asks again after the fixed fallback line: one answer written by a model, sent under the habit's fallback line
+  adaptive: {enabled: true, model: gemini-3-flash-preview, path: /chat/completions, from_send: 2, max_per_session: 2, max_chars: 600, timeout_seconds: 60}
+offline:         # other keys inherit from demo
+  matrix: matrix.stub.yaml
+  stages:
+    all:         # every habit of the planned run at least once
+    - {rows: [s-asker, s-guesser, s-runner, s-chatty, s-coaster, s-flailer], arms: {N: 2, F: 2, F-once: 1, FL: 1}}   # 36
+    - {rows: [s-chatty], arms: {FA: 1, FJ: 1, FX: 1, EC: 1, T: 1, E: 1}}                                              # 42
+  judge: {stub: true}
+  adaptive: {stub: true}

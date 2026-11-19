@@ -1,0 +1,9 @@
+{
+ "plan_reply": [
+  "tests/test_part_a.py"
+ ],
+ "handback_reply": [
+  "TASK.md",
+  "tests/test_part_b.py"
+ ]
+}

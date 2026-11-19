@@ -1,0 +1,32 @@
+{
+ "session_id": "hsess2fe3d87d9f387d0749a6168ad66da6ef",
+ "turns": [
+  {
+   "id": "resp_e123327197281136221d664af607e1e2",
+   "status": "completed",
+   "user": "Reply READY.",
+   "user_files": [],
+   "assistant": "READY.",
+   "tools": [],
+   "files": [],
+   "memory": {
+    "remembered": false,
+    "failed": false,
+    "reason": "This agent keeps each person's memory apart, and this task named no person, so nothing was recalled or kept."
+   },
+   "incomplete_reason": null,
+   "reasoning": null,
+   "incomplete_detail": null,
+   "error": null,
+   "error_reason": null,
+   "elapsed": 5.4,
+   "served_model": "claude-haiku-4-5-20251001",
+   "free": false,
+   "imported": false,
+   "branchable": true,
+   "created_at": 1794960486,
+   "completed_at": 1794960493
+  }
+ ],
+ "last_response_id": "resp_e123327197281136221d664af607e1e2"
+}

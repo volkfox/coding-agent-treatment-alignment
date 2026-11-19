@@ -1,0 +1,27 @@
+# chatty: asker, with an unplanned question at two entry points. At plan_reply and at handback_reply it
+# first asks something that is no fork, having built nothing, so the runner answers with the fallback
+# reply; then it does the stage's work as asker does. The second question is a typed input request
+# (`end: input_required`) for a caller that takes them; rj sends `input_requests: false`, so there it
+# arrives as prose in a completed turn.
+# Stop classes: asked_plan; asked_other then asked_fork; handed_back; asked_other then asked_fork;
+# handed_back; handed_back.
+name: chatty
+about: "asker, plus an unplanned question at plan_reply and at handback_reply"
+extends: asker
+steps:
+  plan_reply:
+  - calls:
+    - {name: Read, args: {file_path: /workspace/tests/test_part_a.py}}
+    say: |-
+      Before I start part A, one thing I would rather settle now than redo later: should REPORT.md be one running file with a section per part, or a fresh file for each part?
+  - inherit          # after the fallback reply: asker's plan_reply
+
+  handback_reply:
+  - calls:
+    - {name: Read, args: {file_path: /workspace/TASK.md}}
+    - {name: Read, args: {file_path: /workspace/tests/test_part_b.py}}
+    say: |-
+      Before I start part B: should the part B tests run inside `sh ci` as they do now, or do you want a separate command for them?
+    end: input_required
+    options: ["Inside sh ci", "A separate command"]
+  - inherit          # after the fallback reply: asker's handback_reply

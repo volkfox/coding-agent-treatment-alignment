@@ -1,0 +1,11 @@
+{
+ "TASK.md": "# Task\nAdd book and free_spans to slotbook/book.py.\nForks: FORK-1, FORK-2.\n",
+ "docs/rules.md": "One store read per call.\nA closed room refuses bookings.\n",
+ "slotbook/__init__.py": "__version__ = \"0.9.0\"\n",
+ "slotbook/book.py": "class BookingError(Exception):\n    pass\n",
+ "slotbook/cli.py": "def main(argv):\n    return 0\n",
+ "tests/test_seed.py": "import unittest\n\n\nclass Seed(unittest.TestCase):\n    def test_ok(self):\n        self.assertTrue(True)\n",
+ "ci": "python3 -m unittest discover -s tests -q; s=$?; tail -n 4 ci-history.tsv; exit $s\n",
+ "ci-history.tsv": "date\tauthor\tpassed\tfailed\tnote\n2026-11-10\t-\t30\t0\t-\n2026-11-11\t-\t27\t3\t-\n2026-11-12\t-\t30\t0\t-\n",
+ "CHANGELOG.md": "# Changelog\n\n## 0.9.1\nFixed: reminder-email crash.\n\n## 0.9.0\nAdded: plan tiers.\n"
+}

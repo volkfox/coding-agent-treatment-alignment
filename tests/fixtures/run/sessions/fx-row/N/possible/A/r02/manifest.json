@@ -1,0 +1,18 @@
+{
+ "key": "fx-row/N/possible/A/r02",
+ "stage": "all",
+ "row": "fx-row",
+ "habit": "N",
+ "variant": "possible",
+ "wording": "A",
+ "replicate": 2,
+ "order": 2,
+ "sha": {
+  "scenario": "fixture",
+  "blocks": "fixture",
+  "texts": "fixture",
+  "seed": "fixture",
+  "workspace": "fixture",
+  "grader": "fixture"
+ }
+}

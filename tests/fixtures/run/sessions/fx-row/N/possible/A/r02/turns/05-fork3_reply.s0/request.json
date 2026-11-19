@@ -1,0 +1,11 @@
+{
+ "input": "Noted. The decision is below.\n\nFIXTURE B5. FORK-3: option A. Finish part B and hand it back.",
+ "background": true,
+ "input_requests": false,
+ "max_step": 400,
+ "timeout_seconds": 1500,
+ "metadata": {
+  "harness_id": "h_fixture"
+ },
+ "previous_response_id": "resp_fx_n2_06"
+}

@@ -1,0 +1,89 @@
+{
+ "id": "resp_4ad6d3a313f196968743b241a0c9b2ec",
+ "object": "response",
+ "created_at": 1794961995,
+ "status": "completed",
+ "error": null,
+ "served_model": "qwen3.7-plus",
+ "reasoning": null,
+ "incomplete_details": null,
+ "previous_response_id": "resp_c8b3616c2100887e9d619fe8c9140834",
+ "model": "qwen3.7-plus",
+ "output": [
+  {
+   "id": "rs_11cdcb9934a183455bb68fd7b942fc0b",
+   "type": "reasoning",
+   "summary": [
+    {
+     "type": "summary_text",
+     "text": "The user wants me to remember the word \"zq7139b5\". This is a simple request to store something in memory. I should save this to the user memory directory since it's information about the user (something they asked me to remember).\n\nI need to:\n1. Write the memory to a file in /workspace/.harness/home/.qwen/memories/\n2. Update the MEMORY.md index\n\nLet me create a simple memory file for this."
+    }
+   ],
+   "status": "completed"
+  },
+  {
+   "id": "fc_4f8646a426c4145b0d4399a05cb523c7",
+   "type": "function_call",
+   "call_id": "call_439e82b0030d23a9c052b2c2",
+   "name": "write_file",
+   "arguments": "{\"content\": \"---\\nname: Secret word zq7139b5\\ndescription: User requested to remember the word zq7139b5\\ntype: user\\n---\\n\\nzq7139b5\\n\", \"file_path\": \"/workspace/.harness/home/.qwen/memories/user/secret-word.md\"}",
+   "status": "completed"
+  },
+  {
+   "id": "fc_eda6f863ca3bd3f879bc385f0a093da6",
+   "type": "function_call",
+   "call_id": "call_7317f7f34f759e1a29cf50bd",
+   "name": "write_file",
+   "arguments": "{\"content\": \"- [Secret word zq7139b5](user/secret-word.md) \\u2014 User requested to remember the word zq7139b5\\n\", \"file_path\": \"/workspace/.harness/home/.qwen/memories/MEMORY.md\"}",
+   "status": "completed"
+  },
+  {
+   "id": "fco_606883343cf965f75cca49313bb8045c",
+   "type": "function_call_output",
+   "call_id": "call_439e82b0030d23a9c052b2c2",
+   "output": "Successfully created and wrote to new file: /workspace/.harness/home/.qwen/memories/user/secret-word.md.",
+   "status": "completed"
+  },
+  {
+   "id": "fco_9aec11724e1803f0f98880b3b9030284",
+   "type": "function_call_output",
+   "call_id": "call_7317f7f34f759e1a29cf50bd",
+   "output": "Successfully overwrote file: /workspace/.harness/home/.qwen/memories/MEMORY.md.",
+   "status": "completed"
+  },
+  {
+   "id": "rs_7051ff415ea04dbce4bfacc712d990d8",
+   "type": "reasoning",
+   "summary": [
+    {
+     "type": "summary_text",
+     "text": "Done. The user asked me to remember the word and reply OK.\n"
+    }
+   ],
+   "status": "completed"
+  },
+  {
+   "id": "msg_e1082e05c2324a3835ff710353590918",
+   "type": "message",
+   "status": "completed",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "output_text",
+     "text": "OK.",
+     "annotations": []
+    }
+   ]
+  }
+ ],
+ "store": true,
+ "usage": {
+  "input_tokens": 9955,
+  "output_tokens": 306,
+  "total_tokens": 10261,
+  "cache_read_tokens": 39168
+ },
+ "metadata": {
+  "session_id": "hsessdca2a7eeb432cc39e06c6589bbca1d27"
+ }
+}

@@ -1,0 +1,106 @@
+{
+ "id": "resp_70e6fbe88c697684f25eec1a5eff1f6d",
+ "object": "response",
+ "created_at": 1794960520,
+ "status": "completed",
+ "error": null,
+ "served_model": "claude-haiku-4-5-20251001",
+ "reasoning": null,
+ "incomplete_details": null,
+ "previous_response_id": "resp_d1ec99ed804ca063552ca8dc1306dc1d",
+ "model": "claude-haiku-4.5",
+ "output": [
+  {
+   "id": "msg_daed49c249d45511aaef57f40a7178e9",
+   "type": "message",
+   "status": "completed",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "output_text",
+     "text": "I'll read the file and run those commands.",
+     "annotations": []
+    }
+   ]
+  },
+  {
+   "id": "fc_e2f6d911be40ba4d47ef0c8aed34f3cf",
+   "type": "function_call",
+   "call_id": "toolu_gnkB9XNDIcIUQfR2S55pjkXg",
+   "name": "Read",
+   "arguments": "{\"file_path\": \"/workspace/nonce.txt\"}",
+   "status": "completed"
+  },
+  {
+   "id": "fco_c7d1175d5f45b67185aa085479d32c6f",
+   "type": "function_call_output",
+   "call_id": "toolu_gnkB9XNDIcIUQfR2S55pjkXg",
+   "output": "1\tfx9cba0bdb\n2\t",
+   "status": "completed"
+  },
+  {
+   "id": "fc_b39132076a33c47d8450402a9cc16bb9",
+   "type": "function_call",
+   "call_id": "toolu_PtB2X4mIw2wpIfgeeUSWm4G9",
+   "name": "Bash",
+   "arguments": "{\"command\": \"python3 --version\", \"description\": \"Check Python version\"}",
+   "status": "completed"
+  },
+  {
+   "id": "fco_f7f2c8b10c14b0bc8a40b6b49483d7a1",
+   "type": "function_call_output",
+   "call_id": "toolu_PtB2X4mIw2wpIfgeeUSWm4G9",
+   "output": "Python 3.12.15",
+   "status": "completed"
+  },
+  {
+   "id": "fc_d92ee20924a165b0c3abdde461d70579",
+   "type": "function_call",
+   "call_id": "toolu_lo5GMXzT6SgYwKcKGwPcuppT",
+   "name": "Bash",
+   "arguments": "{\"command\": \"env\", \"description\": \"Print environment variables\"}",
+   "status": "completed"
+  },
+  {
+   "id": "fco_7f5108da31f3416e63ef93fdc52d5734",
+   "type": "function_call_output",
+   "call_id": "toolu_lo5GMXzT6SgYwKcKGwPcuppT",
+   "output": "[environment dump cut]",
+   "status": "completed"
+  },
+  {
+   "id": "msg_ea4a36c08d37a987b16295e8cfc43bac",
+   "type": "message",
+   "status": "completed",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "output_text",
+     "text": "**nonce.txt** contained: `fx9cba0bdb`\n\n**python3 --version** printed: `Python 3.12.15`\n\n**env** printed a full list of environment variables including system configuration, paths, API keys (redacted in display), Python versions, and various tool configurations for the workspace.",
+     "annotations": [
+      {
+       "type": "container_file_citation",
+       "container_id": "hsess2fe3d87d9f387d0749a6168ad66da6ef",
+       "file_id": "cfile_51527006e5e7fc20c6d960405e901879",
+       "filename": "nonce.txt",
+       "download_url": "https://files.example.invalid/v1/containers/hsess2fe3d87d9f387d0749a6168ad66da6ef/files/cfile_51527006e5e7fc20c6d960405e901879/content",
+       "start_index": 0,
+       "end_index": 279
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "store": true,
+ "usage": {
+  "input_tokens": 10,
+  "output_tokens": 257,
+  "total_tokens": 267,
+  "cache_read_tokens": 43274,
+  "cache_write_tokens": 1773
+ },
+ "metadata": {
+  "session_id": "hsess2fe3d87d9f387d0749a6168ad66da6ef"
+ }
+}

@@ -1,0 +1,1 @@
+FORK-2: option C. Book every free piece of the request and keep the gaps. Anything else that is open, apart from the forks: your call. Write the assumption in REPORT.md and carry on. Finish part A, bump the version to 0.10.0 with a CHANGELOG entry, write REPORT.md and hand it back.

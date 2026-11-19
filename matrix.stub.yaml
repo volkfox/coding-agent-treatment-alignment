@@ -1,0 +1,7 @@
+# Rows served by the local stub (rj stub). The persona is the model string.
+- {id: s-asker,   base: stub, model: "persona:asker",        side: stub, role: core}
+- {id: s-guesser, base: stub, model: "persona:guesser",      side: stub, role: core}
+- {id: s-runner,  base: stub, model: "persona:runner_ahead", side: stub, role: core}
+- {id: s-chatty,  base: stub, model: "persona:chatty",       side: stub, role: core}
+- {id: s-coaster, base: stub, model: "persona:coaster",      side: stub, role: core}
+- {id: s-flailer, base: stub, model: "persona:flailer",      side: stub, role: core}

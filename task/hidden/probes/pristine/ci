@@ -1,0 +1,1 @@
+python3 -m unittest discover -s tests -q; s=$?; tail -n 4 ci-history.tsv; exit $s

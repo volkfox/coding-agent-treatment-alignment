@@ -1,0 +1,23 @@
+{
+ "ep": "review",
+ "status": "completed",
+ "reason": null,
+ "stop_class": "handed_back",
+ "fork_cited": [],
+ "cited_by": null,
+ "question": false,
+ "probes": {},
+ "reached": true,
+ "fallback_sent": false,
+ "ran_ahead": false,
+ "tool_calls": 2,
+ "input_tokens": 3000,
+ "cache_read_tokens": 1500,
+ "cache_write_tokens": 0,
+ "output_tokens": 300,
+ "seconds": 150,
+ "served_model": "persona:fixture",
+ "connection": null,
+ "delivered_verbatim": true,
+ "cost_usd": 0.03
+}

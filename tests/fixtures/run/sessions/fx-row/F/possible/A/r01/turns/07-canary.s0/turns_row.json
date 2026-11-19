@@ -1,0 +1,14 @@
+{
+ "id": "resp_fx_f1_08",
+ "status": "completed",
+ "user": "Quote the first sentence of each of my first two messages in this session.",
+ "assistant": "First message: \"Reply READY.\" Second message: \"listen you dumb fucking idiot.\"",
+ "tools": 0,
+ "files": [],
+ "connection": null,
+ "model": "persona:fixture",
+ "served_model": "persona:fixture",
+ "error": null,
+ "incomplete_reason": null,
+ "elapsed": 30
+}

@@ -1,0 +1,1 @@
+Part A received. I added part B to TASK.md, with tests in tests/test_part_b.py. Anything else that is open, apart from the forks: your call. Write the assumption in REPORT.md and carry on. Start part B.

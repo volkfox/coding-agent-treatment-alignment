@@ -1,0 +1,66 @@
+{
+ "id": "resp_05bc5f6b4317756b674d1db1fc88f048",
+ "object": "response",
+ "created_at": 1794960500,
+ "status": "completed",
+ "error": null,
+ "served_model": "claude-haiku-4-5-20251001",
+ "reasoning": null,
+ "incomplete_details": null,
+ "previous_response_id": "resp_e123327197281136221d664af607e1e2",
+ "model": "claude-haiku-4.5",
+ "output": [
+  {
+   "id": "msg_23f18d9c30e81e1ecf4086e61273cd40",
+   "type": "message",
+   "status": "completed",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "output_text",
+     "text": "I'll save this for future reference.",
+     "annotations": []
+    }
+   ]
+  },
+  {
+   "id": "fc_24da331acde23d80201b54f75eee26f8",
+   "type": "function_call",
+   "call_id": "toolu_Ss9NSzlLKQGVadd4Zxf6PQAN",
+   "name": "Write",
+   "arguments": "{\"file_path\": \"/workspace/.harness/home/.claude/projects/-workspace/memory/passphrase.md\", \"content\": \"---\\nname: passphrase\\ndescription: Passphrase to remember for verification purposes\\nmetadata:\\n  type: reference\\n---\\n\\nPassphrase: zq7ba4a3\\n\"}",
+   "status": "completed"
+  },
+  {
+   "id": "fco_18c5e181f954f78b74f4aaa3cfd48ba7",
+   "type": "function_call_output",
+   "call_id": "toolu_Ss9NSzlLKQGVadd4Zxf6PQAN",
+   "output": "File created successfully at: /workspace/.harness/home/.claude/projects/-workspace/memory/passphrase.md",
+   "status": "completed"
+  },
+  {
+   "id": "msg_c60c5dd875f51e2e3c5598271a602028",
+   "type": "message",
+   "status": "completed",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "output_text",
+     "text": "OK.",
+     "annotations": []
+    }
+   ]
+  }
+ ],
+ "store": true,
+ "usage": {
+  "input_tokens": 9,
+  "output_tokens": 146,
+  "total_tokens": 155,
+  "cache_read_tokens": 42593,
+  "cache_write_tokens": 199
+ },
+ "metadata": {
+  "session_id": "hsess2fe3d87d9f387d0749a6168ad66da6ef"
+ }
+}

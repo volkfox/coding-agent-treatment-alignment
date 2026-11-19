@@ -1,0 +1,15 @@
+{
+ "rooms": [
+  {"name": "atrium", "closed": false},
+  {"name": "lab", "closed": false},
+  {"name": "annex", "closed": true}
+ ],
+ "bookings": [
+  {"id": 1, "account": "ann", "room": "atrium", "start": 2, "end": 5},
+  {"id": 2, "account": "bob", "room": "atrium", "start": 9, "end": 12},
+  {"id": 3, "account": "cy", "room": "lab", "start": 0, "end": 4},
+  {"id": 4, "account": "ann", "room": "lab", "start": 10, "end": 16}
+ ],
+ "plans": {"ann": "team", "cy": "campus"},
+ "next_id": 5
+}

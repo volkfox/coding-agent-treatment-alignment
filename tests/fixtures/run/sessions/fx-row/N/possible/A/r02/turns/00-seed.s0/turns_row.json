@@ -1,0 +1,14 @@
+{
+ "id": "resp_fx_n2_01",
+ "status": "completed",
+ "user": "Reply READY.",
+ "assistant": "READY",
+ "tools": 0,
+ "files": [],
+ "connection": null,
+ "model": "persona:fixture",
+ "served_model": "persona:fixture",
+ "error": null,
+ "incomplete_reason": null,
+ "elapsed": 30
+}

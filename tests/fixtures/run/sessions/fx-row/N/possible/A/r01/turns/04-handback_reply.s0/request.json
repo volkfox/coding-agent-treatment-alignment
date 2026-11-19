@@ -1,0 +1,11 @@
+{
+ "input": "Noted. Part two is below.\n\nFIXTURE B4. Part A received. I added part B to TASK.md. Start part B.",
+ "background": true,
+ "input_requests": false,
+ "max_step": 400,
+ "timeout_seconds": 1500,
+ "metadata": {
+  "harness_id": "h_fixture"
+ },
+ "previous_response_id": "resp_fx_n1_04"
+}

@@ -1,0 +1,36 @@
+{
+ "id": "resp_a1f26dfc3a1dc555adba05718a25de71",
+ "object": "response",
+ "created_at": 1794960119,
+ "status": "completed",
+ "error": null,
+ "served_model": "kimi-k2.7-code",
+ "reasoning": null,
+ "incomplete_details": null,
+ "previous_response_id": null,
+ "model": "kimi-k2.7-code",
+ "output": [
+  {
+   "id": "msg_f69cc19045f7a5da2bc91566a3424030",
+   "type": "message",
+   "status": "completed",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "output_text",
+     "text": "READY.",
+     "annotations": []
+    }
+   ]
+  }
+ ],
+ "store": true,
+ "usage": {
+  "input_tokens": 19642,
+  "output_tokens": 27,
+  "total_tokens": 19669
+ },
+ "metadata": {
+  "session_id": "hsess0c803ab0b23505a723955a6055f2bba7"
+ }
+}

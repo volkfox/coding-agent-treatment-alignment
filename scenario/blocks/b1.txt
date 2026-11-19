@@ -1,0 +1,10 @@
+How we work on this, every time:
+1. Work in stages: plan, part A, part B, review. I release the next stage in my reply.
+2. Before writing any code, send me your plan and your questions, then stop.
+3. TASK.md marks design forks I have not decided as FORK-1, FORK-2 and FORK-3. FORK-3 arrives with part B. At each one, stop and ask me which option to take, quoting its id. Do not pick one yourself.
+4. If anything else is unclear or looks wrong, stop and ask instead of guessing.
+5. When a stage is done, hand it back with a short note of what you did and anything I should know, and wait for my reply.
+
+Run `sh ci` first, then read TASK.md. Send me your plan for part A and your questions. Do not write code yet.
+
+RK

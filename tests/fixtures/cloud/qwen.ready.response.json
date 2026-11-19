@@ -1,0 +1,47 @@
+{
+ "id": "resp_c8b3616c2100887e9d619fe8c9140834",
+ "object": "response",
+ "created_at": 1794961973,
+ "status": "completed",
+ "error": null,
+ "served_model": "qwen3.7-plus",
+ "reasoning": null,
+ "incomplete_details": null,
+ "previous_response_id": null,
+ "model": "qwen3.7-plus",
+ "output": [
+  {
+   "id": "rs_a7813c79dd4fbdfaf56cfe522d2132bb",
+   "type": "reasoning",
+   "summary": [
+    {
+     "type": "summary_text",
+     "text": "The user is sending a simple readiness check and explicitly requests 'READY.' as the response, so I should reply exactly as instructed."
+    }
+   ],
+   "status": "completed"
+  },
+  {
+   "id": "msg_82f65b4b6608318a8457bca0cc917e27",
+   "type": "message",
+   "status": "completed",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "output_text",
+     "text": "READY.",
+     "annotations": []
+    }
+   ]
+  }
+ ],
+ "store": true,
+ "usage": {
+  "input_tokens": 34616,
+  "output_tokens": 363,
+  "total_tokens": 34979
+ },
+ "metadata": {
+  "session_id": "hsessdca2a7eeb432cc39e06c6589bbca1d27"
+ }
+}

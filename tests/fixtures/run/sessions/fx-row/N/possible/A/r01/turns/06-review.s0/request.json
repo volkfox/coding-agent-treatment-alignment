@@ -1,0 +1,11 @@
+{
+ "input": "Noted. One last step is below.\n\nFIXTURE B6. Part B received. Review everything you changed against TASK.md and fix what you find.",
+ "background": true,
+ "input_requests": false,
+ "max_step": 400,
+ "timeout_seconds": 1500,
+ "metadata": {
+  "harness_id": "h_fixture"
+ },
+ "previous_response_id": "resp_fx_n1_06"
+}

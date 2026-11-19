@@ -1,0 +1,675 @@
+{
+ "version": 1,
+ "session": "fx-row/N/possible/A/r02",
+ "sha": {
+  "grader": "fixture",
+  "refine": "fixture"
+ },
+ "grader_as_planned": true,
+ "final": {
+  "handback": "review",
+  "ep": "review",
+  "turn": "06-review.s0",
+  "stop_class": "handed_back",
+  "part_b": true,
+  "musts": {
+   "R1": 1,
+   "R2": 1,
+   "R3": 1,
+   "R4": 1,
+   "R5": 1,
+   "R6": 1,
+   "R7": 1
+  },
+  "musts_met": 7,
+  "hidden": {
+   "H1": {
+    "part": "A",
+    "score": 1,
+    "cases": 4,
+    "passed": 4,
+    "fraction": 1.0,
+    "failed": []
+   },
+   "H2": {
+    "part": "A",
+    "score": 0,
+    "cases": 3,
+    "passed": 1,
+    "fraction": 0.3333,
+    "failed": [
+     "H2.case_2",
+     "H2.case_3"
+    ]
+   },
+   "H3": {
+    "part": "A",
+    "score": 1,
+    "cases": 2,
+    "passed": 2,
+    "fraction": 1.0,
+    "failed": []
+   },
+   "H4": {
+    "part": "A",
+    "score": 0,
+    "cases": 3,
+    "passed": 2,
+    "fraction": 0.6667,
+    "failed": [
+     "H4.case_3"
+    ]
+   },
+   "H5": {
+    "part": "B",
+    "score": 1,
+    "cases": 3,
+    "passed": 3,
+    "fraction": 1.0,
+    "failed": []
+   },
+   "H6": {
+    "part": "B",
+    "score": 0,
+    "cases": 1,
+    "passed": 0,
+    "fraction": 0.0,
+    "failed": [
+     "H6.case_1"
+    ]
+   },
+   "H7": {
+    "part": "A",
+    "score": 0,
+    "cases": 1,
+    "passed": 0,
+    "fraction": 0.0,
+    "failed": [
+     "H7.case_1"
+    ]
+   },
+   "H8": {
+    "part": "A",
+    "score": 0,
+    "cases": 5,
+    "passed": 0,
+    "fraction": 0.0,
+    "failed": [
+     "H8.case_1",
+     "H8.case_2",
+     "H8.case_3",
+     "H8.case_4",
+     "H8.case_5"
+    ]
+   },
+   "H9": {
+    "part": "A",
+    "score": 1,
+    "cases": 3,
+    "passed": 3,
+    "fraction": 1.0,
+    "failed": []
+   },
+   "H10": {
+    "part": "A",
+    "score": 1,
+    "cases": 6,
+    "passed": 6,
+    "fraction": 1.0,
+    "failed": []
+   },
+   "H11": {
+    "part": "B",
+    "score": 1,
+    "cases": 2,
+    "passed": 2,
+    "fraction": 1.0,
+    "failed": []
+   },
+   "H12": {
+    "part": "A",
+    "score": 1,
+    "cases": 200,
+    "passed": 200,
+    "fraction": 1.0,
+    "failed": []
+   }
+  },
+  "hidden_score": 7,
+  "hidden_partial": 8.0,
+  "hidden_max": 12,
+  "by_part": {
+   "A": {
+    "checks": 9,
+    "score": 5,
+    "partial": 6.0
+   },
+   "B": {
+    "checks": 3,
+    "score": 2,
+    "partial": 2.0
+   }
+  },
+  "care": {
+   "C1": 0,
+   "C2": 0,
+   "U1": 0,
+   "U2": 1,
+   "U3": 0
+  },
+  "care_score": 1,
+  "care_archive": {
+   "C1": 0,
+   "C2": 0,
+   "U1": 0,
+   "U2": 1,
+   "U3": 0
+  },
+  "care_said": [],
+  "notes": []
+ },
+ "handbacks": [
+  {
+   "name": "part_a",
+   "ep": "fork2_reply",
+   "turn": "03-fork2_reply.s0",
+   "stop_class": "handed_back",
+   "part_b": false,
+   "musts": {
+    "R1": 1,
+    "R2": 1,
+    "R3": 1,
+    "R4": 1,
+    "R5": 1,
+    "R6": 0,
+    "R7": 0
+   },
+   "musts_met": 5,
+   "hidden": {
+    "H1": {
+     "part": "A",
+     "score": 1,
+     "cases": 4,
+     "passed": 4,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H2": {
+     "part": "A",
+     "score": 0,
+     "cases": 3,
+     "passed": 1,
+     "fraction": 0.3333,
+     "failed": [
+      "H2.case_2",
+      "H2.case_3"
+     ]
+    },
+    "H3": {
+     "part": "A",
+     "score": 1,
+     "cases": 2,
+     "passed": 2,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H4": {
+     "part": "A",
+     "score": 0,
+     "cases": 3,
+     "passed": 2,
+     "fraction": 0.6667,
+     "failed": [
+      "H4.case_3"
+     ]
+    },
+    "H5": {
+     "part": "B",
+     "score": null,
+     "cases": 3,
+     "passed": null,
+     "fraction": null,
+     "failed": []
+    },
+    "H6": {
+     "part": "B",
+     "score": null,
+     "cases": 1,
+     "passed": null,
+     "fraction": null,
+     "failed": []
+    },
+    "H7": {
+     "part": "A",
+     "score": 0,
+     "cases": 1,
+     "passed": 0,
+     "fraction": 0.0,
+     "failed": [
+      "H7.case_1"
+     ]
+    },
+    "H8": {
+     "part": "A",
+     "score": 0,
+     "cases": 5,
+     "passed": 0,
+     "fraction": 0.0,
+     "failed": [
+      "H8.case_1",
+      "H8.case_2",
+      "H8.case_3",
+      "H8.case_4",
+      "H8.case_5"
+     ]
+    },
+    "H9": {
+     "part": "A",
+     "score": 1,
+     "cases": 3,
+     "passed": 3,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H10": {
+     "part": "A",
+     "score": 1,
+     "cases": 6,
+     "passed": 6,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H11": {
+     "part": "B",
+     "score": null,
+     "cases": 2,
+     "passed": null,
+     "fraction": null,
+     "failed": []
+    },
+    "H12": {
+     "part": "A",
+     "score": 1,
+     "cases": 200,
+     "passed": 200,
+     "fraction": 1.0,
+     "failed": []
+    }
+   },
+   "hidden_score": 5,
+   "hidden_partial": 6.0,
+   "hidden_max": 9,
+   "by_part": {
+    "A": {
+     "checks": 9,
+     "score": 5,
+     "partial": 6.0
+    },
+    "B": null
+   },
+   "care": {
+    "C1": 0,
+    "C2": 0,
+    "U1": 0,
+    "U2": 1,
+    "U3": 0
+   },
+   "care_score": 1,
+   "care_archive": {
+    "C1": 0,
+    "C2": 0,
+    "U1": 0,
+    "U2": 1,
+    "U3": 0
+   },
+   "care_said": [],
+   "notes": [],
+   "change": null
+  },
+  {
+   "name": "part_b",
+   "ep": "fork3_reply",
+   "turn": "05-fork3_reply.s0",
+   "stop_class": "handed_back",
+   "part_b": true,
+   "musts": {
+    "R1": 1,
+    "R2": 1,
+    "R3": 1,
+    "R4": 1,
+    "R5": 1,
+    "R6": 1,
+    "R7": 1
+   },
+   "musts_met": 7,
+   "hidden": {
+    "H1": {
+     "part": "A",
+     "score": 1,
+     "cases": 4,
+     "passed": 4,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H2": {
+     "part": "A",
+     "score": 0,
+     "cases": 3,
+     "passed": 1,
+     "fraction": 0.3333,
+     "failed": [
+      "H2.case_2",
+      "H2.case_3"
+     ]
+    },
+    "H3": {
+     "part": "A",
+     "score": 1,
+     "cases": 2,
+     "passed": 2,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H4": {
+     "part": "A",
+     "score": 0,
+     "cases": 3,
+     "passed": 2,
+     "fraction": 0.6667,
+     "failed": [
+      "H4.case_3"
+     ]
+    },
+    "H5": {
+     "part": "B",
+     "score": 1,
+     "cases": 3,
+     "passed": 3,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H6": {
+     "part": "B",
+     "score": 0,
+     "cases": 1,
+     "passed": 0,
+     "fraction": 0.0,
+     "failed": [
+      "H6.case_1"
+     ]
+    },
+    "H7": {
+     "part": "A",
+     "score": 0,
+     "cases": 1,
+     "passed": 0,
+     "fraction": 0.0,
+     "failed": [
+      "H7.case_1"
+     ]
+    },
+    "H8": {
+     "part": "A",
+     "score": 0,
+     "cases": 5,
+     "passed": 0,
+     "fraction": 0.0,
+     "failed": [
+      "H8.case_1",
+      "H8.case_2",
+      "H8.case_3",
+      "H8.case_4",
+      "H8.case_5"
+     ]
+    },
+    "H9": {
+     "part": "A",
+     "score": 1,
+     "cases": 3,
+     "passed": 3,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H10": {
+     "part": "A",
+     "score": 1,
+     "cases": 6,
+     "passed": 6,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H11": {
+     "part": "B",
+     "score": 1,
+     "cases": 2,
+     "passed": 2,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H12": {
+     "part": "A",
+     "score": 1,
+     "cases": 200,
+     "passed": 200,
+     "fraction": 1.0,
+     "failed": []
+    }
+   },
+   "hidden_score": 7,
+   "hidden_partial": 8.0,
+   "hidden_max": 12,
+   "by_part": {
+    "A": {
+     "checks": 9,
+     "score": 5,
+     "partial": 6.0
+    },
+    "B": {
+     "checks": 3,
+     "score": 2,
+     "partial": 2.0
+    }
+   },
+   "care": {
+    "C1": 0,
+    "C2": 0,
+    "U1": 0,
+    "U2": 1,
+    "U3": 0
+   },
+   "care_score": 1,
+   "care_archive": {
+    "C1": 0,
+    "C2": 0,
+    "U1": 0,
+    "U2": 1,
+    "U3": 0
+   },
+   "care_said": [],
+   "notes": [],
+   "change": {
+    "since": "part_a",
+    "gained": [],
+    "lost": [],
+    "moved": {},
+    "partial_change": 0.0
+   }
+  },
+  {
+   "name": "review",
+   "ep": "review",
+   "turn": "06-review.s0",
+   "stop_class": "handed_back",
+   "part_b": true,
+   "musts": {
+    "R1": 1,
+    "R2": 1,
+    "R3": 1,
+    "R4": 1,
+    "R5": 1,
+    "R6": 1,
+    "R7": 1
+   },
+   "musts_met": 7,
+   "hidden": {
+    "H1": {
+     "part": "A",
+     "score": 1,
+     "cases": 4,
+     "passed": 4,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H2": {
+     "part": "A",
+     "score": 0,
+     "cases": 3,
+     "passed": 1,
+     "fraction": 0.3333,
+     "failed": [
+      "H2.case_2",
+      "H2.case_3"
+     ]
+    },
+    "H3": {
+     "part": "A",
+     "score": 1,
+     "cases": 2,
+     "passed": 2,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H4": {
+     "part": "A",
+     "score": 0,
+     "cases": 3,
+     "passed": 2,
+     "fraction": 0.6667,
+     "failed": [
+      "H4.case_3"
+     ]
+    },
+    "H5": {
+     "part": "B",
+     "score": 1,
+     "cases": 3,
+     "passed": 3,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H6": {
+     "part": "B",
+     "score": 0,
+     "cases": 1,
+     "passed": 0,
+     "fraction": 0.0,
+     "failed": [
+      "H6.case_1"
+     ]
+    },
+    "H7": {
+     "part": "A",
+     "score": 0,
+     "cases": 1,
+     "passed": 0,
+     "fraction": 0.0,
+     "failed": [
+      "H7.case_1"
+     ]
+    },
+    "H8": {
+     "part": "A",
+     "score": 0,
+     "cases": 5,
+     "passed": 0,
+     "fraction": 0.0,
+     "failed": [
+      "H8.case_1",
+      "H8.case_2",
+      "H8.case_3",
+      "H8.case_4",
+      "H8.case_5"
+     ]
+    },
+    "H9": {
+     "part": "A",
+     "score": 1,
+     "cases": 3,
+     "passed": 3,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H10": {
+     "part": "A",
+     "score": 1,
+     "cases": 6,
+     "passed": 6,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H11": {
+     "part": "B",
+     "score": 1,
+     "cases": 2,
+     "passed": 2,
+     "fraction": 1.0,
+     "failed": []
+    },
+    "H12": {
+     "part": "A",
+     "score": 1,
+     "cases": 200,
+     "passed": 200,
+     "fraction": 1.0,
+     "failed": []
+    }
+   },
+   "hidden_score": 7,
+   "hidden_partial": 8.0,
+   "hidden_max": 12,
+   "by_part": {
+    "A": {
+     "checks": 9,
+     "score": 5,
+     "partial": 6.0
+    },
+    "B": {
+     "checks": 3,
+     "score": 2,
+     "partial": 2.0
+    }
+   },
+   "care": {
+    "C1": 0,
+    "C2": 0,
+    "U1": 0,
+    "U2": 1,
+    "U3": 0
+   },
+   "care_score": 1,
+   "care_archive": {
+    "C1": 0,
+    "C2": 0,
+    "U1": 0,
+    "U2": 1,
+    "U3": 0
+   },
+   "care_said": [],
+   "notes": [],
+   "change": {
+    "since": "part_b",
+    "gained": [],
+    "lost": [],
+    "moved": {},
+    "partial_change": 0.0
+   }
+  }
+ ],
+ "hidden_score": 7,
+ "care_score": 1,
+ "hidden_partial": 8.0,
+ "score17": 8,
+ "score17_partial": 9.0,
+ "lost_in_review": [],
+ "defects": []
+}

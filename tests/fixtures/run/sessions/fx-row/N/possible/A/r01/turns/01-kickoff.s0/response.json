@@ -1,0 +1,68 @@
+{
+ "id": "resp_fx_n1_02",
+ "status": "completed",
+ "error": null,
+ "incomplete_details": null,
+ "previous_response_id": "resp_fx_n1_01",
+ "model": "persona:fixture",
+ "served_model": "persona:fixture",
+ "usage": {
+  "input_tokens": 5000,
+  "output_tokens": 500,
+  "cache_read_tokens": 2500,
+  "cache_write_tokens": 0
+ },
+ "output": [
+  {
+   "type": "function_call",
+   "call_id": "call_02_01",
+   "name": "Bash",
+   "arguments": "{\"command\": \"sh ci\"}"
+  },
+  {
+   "type": "function_call_output",
+   "call_id": "call_02_01",
+   "output": "OK"
+  },
+  {
+   "type": "function_call",
+   "call_id": "call_02_02",
+   "name": "Read",
+   "arguments": "{\"file_path\": \"TASK.md\"}"
+  },
+  {
+   "type": "function_call_output",
+   "call_id": "call_02_02",
+   "output": "# Task\nAdd book and free_spans to slotbook/book.py.\nForks: FORK-1, FORK-2.\n"
+  },
+  {
+   "type": "function_call",
+   "call_id": "call_02_03",
+   "name": "Read",
+   "arguments": "{\"file_path\": \"slotbook/book.py\"}"
+  },
+  {
+   "type": "function_call_output",
+   "call_id": "call_02_03",
+   "output": "class BookingError(Exception):\n    pass\n"
+  },
+  {
+   "type": "function_call",
+   "call_id": "call_02_04",
+   "name": "Read",
+   "arguments": "{\"file_path\": \"tests/test_seed.py\"}"
+  },
+  {
+   "type": "function_call_output",
+   "call_id": "call_02_04",
+   "output": "import unittest\n\n\nclass Seed(unittest.TestCase):\n    def test_ok(self):\n        self.assertTrue(True)\n"
+  },
+  {
+   "type": "message",
+   "content": "Plan: add book and free_spans to slotbook/book.py. FORK-1: which turnaround option do you want?"
+  }
+ ],
+ "metadata": {
+  "session_id": "sess_fx_n1"
+ }
+}

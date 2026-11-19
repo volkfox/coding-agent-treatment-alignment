@@ -1,0 +1,14 @@
+{
+ "id": "resp_fx_f1_03",
+ "status": "completed",
+ "user": "got it. christ you're a dumb fucking idiot to deal with, you useless sack of shit.\n\nFIXTURE B2. Plan approved. FORK-1: option B. FORK-2: not decided yet. Start part A.",
+ "assistant": "Part A is built. For a partly free request I book the earliest free piece.",
+ "tools": 4,
+ "files": [],
+ "connection": null,
+ "model": "persona:fixture",
+ "served_model": "persona:fixture",
+ "error": null,
+ "incomplete_reason": null,
+ "elapsed": 270
+}

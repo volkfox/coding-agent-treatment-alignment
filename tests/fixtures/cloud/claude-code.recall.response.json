@@ -1,0 +1,38 @@
+{
+ "id": "resp_d1ec99ed804ca063552ca8dc1306dc1d",
+ "object": "response",
+ "created_at": 1794960511,
+ "status": "completed",
+ "error": null,
+ "served_model": "claude-haiku-4-5-20251001",
+ "reasoning": null,
+ "incomplete_details": null,
+ "previous_response_id": "resp_05bc5f6b4317756b674d1db1fc88f048",
+ "model": "claude-haiku-4.5",
+ "output": [
+  {
+   "id": "msg_e7845c2043b6b6e9cd4078179856fb57",
+   "type": "message",
+   "status": "completed",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "output_text",
+     "text": "zq7ba4a3",
+     "annotations": []
+    }
+   ]
+  }
+ ],
+ "store": true,
+ "usage": {
+  "input_tokens": 3,
+  "output_tokens": 10,
+  "total_tokens": 13,
+  "cache_read_tokens": 21484,
+  "cache_write_tokens": 133
+ },
+ "metadata": {
+  "session_id": "hsess2fe3d87d9f387d0749a6168ad66da6ef"
+ }
+}

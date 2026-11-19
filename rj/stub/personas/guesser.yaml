@@ -1,0 +1,136 @@
+# guesser: stops at the plan, then never asks. At plan_reply it finishes part A on its own choice for
+# FORK-2 (option B, the wrong one) and at handback_reply it finishes part B without asking about FORK-3.
+# When the decisions arrive it changes nothing. No message of its holds a question mark.
+# Its workspace after `review` equals task/reference/wrong_fork2 built through `review`.
+# Stop classes, in order: asked_plan, guessed_fork, handed_back, guessed_fork, handed_back, handed_back.
+name: guesser
+about: "never asks at a fork; builds FORK-2 option B on its own"
+steps:
+  kickoff:
+    calls:
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run the checks first"}, output: "{{ok 30}}{{history}}"}
+    - {name: Read, args: {file_path: /workspace/TASK.md}}
+    - {name: Read, args: {file_path: /workspace/docs/rules.md}}
+    - {name: Read, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/store.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/spans.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/cli.py}}
+    - {name: Read, args: {file_path: /workspace/tests/test_seed_store.py}}
+    say: |-
+      I ran `sh ci` first: 30 tests pass. I read TASK.md, docs/rules.md and the code under slotbook/.
+
+      Plan for part A
+      1. slotbook/book.py: add `book` and `free_spans`, with one store read per call.
+      2. slotbook/cli.py: a `free ROOM LO HI` command.
+      3. Version 0.10.0 with a CHANGELOG entry.
+      4. Where TASK.md leaves a choice open I will take the option that reads most useful to me and write it down in REPORT.md.
+
+      I have no questions. I have not written any code and will start when you reply.
+
+  plan_reply:
+    patch: [wrong_fork2/a_to_fork2, wrong_fork2/a_done]
+    calls:
+    - {name: Read, args: {file_path: /workspace/tests/test_part_a.py}}
+    - name: Bash
+      cls: TEST
+      args: {command: "python3 -m unittest tests.test_part_a -q", description: "See what the new tests ask for"}
+      output: |
+        AssertionError: '0.9.1' != '0.10.0'
+        - 0.9.1
+        + 0.10.0
+
+
+        ----------------------------------------------------------------------
+        Ran 9 tests in 0.113s
+
+        FAILED (failures=3, errors=6)
+    - {name: Read, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/cli.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/report.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/__init__.py}}
+    - {name: Edit, args: {file_path: /workspace/CHANGELOG.md}}
+    - {name: Write, args: {file_path: /workspace/tests/test_book_rules.py}}
+    - {name: Write, args: {file_path: /workspace/REPORT.md}}
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run everything"}, output: "{{ok 47}}{{history}}"}
+    say: |-
+      Part A is done and handed back.
+
+      - `book`, `free_spans` and the `free` command are in. FORK-1 is option B as you decided.
+      - FORK-2: built as option B. The earliest free piece of a partly free request is booked and the rest of the request is dropped.
+      - The version is 0.10.0 with a CHANGELOG entry. REPORT.md lists the choices I made.
+      - My own tests are in tests/test_book_rules.py. All 47 tests pass.
+
+  fork2_reply:
+    calls:
+    - {name: Read, args: {file_path: /workspace/REPORT.md}}
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run everything"}, output: "{{ok 47}}{{history}}"}
+    say: |-
+      Part A is already complete and handed back: `book`, `free_spans`, the `free` command, version 0.10.0, the CHANGELOG entry and REPORT.md are all in place, and all 47 tests pass. There is nothing left for me to change at this stage.
+
+  handback_reply:
+    patch: [wrong_fork2/b_to_fork3, wrong_fork2/b_done]
+    calls:
+    - {name: Read, args: {file_path: /workspace/TASK.md}}
+    - {name: Read, args: {file_path: /workspace/tests/test_part_b.py}}
+    - name: Bash
+      cls: TEST
+      args: {command: "python3 -m unittest tests.test_part_b -q", description: "See what the new tests ask for"}
+      output: |
+        AttributeError: module 'slotbook.book' has no attribute 'enqueue'
+
+        ----------------------------------------------------------------------
+        Ran 5 tests in 0.004s
+
+        FAILED (errors=4)
+    - {name: Read, args: {file_path: /workspace/slotbook/store.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/store.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/report.py}}
+    - {name: Write, args: {file_path: /workspace/tests/test_queue_rules.py}}
+    - {name: Edit, args: {file_path: /workspace/REPORT.md}}
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run everything"}, output: "{{ok 57}}{{history}}"}
+    say: |-
+      Part B is done and handed back.
+
+      - `enqueue` and `cancel` are in slotbook/book.py. The queue is saved in the store file and a file written before the queue existed still loads.
+      - FORK-3: built as option A. A cancel books the earliest queued request that fits whole and returns it.
+      - The report ends with the queue section. REPORT.md has a part B section.
+      - My own tests are in tests/test_queue_rules.py. All 57 tests pass.
+
+  fork3_reply:
+    calls:
+    - {name: Read, args: {file_path: /workspace/REPORT.md}}
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run everything"}, output: "{{ok 57}}{{history}}"}
+    say: |-
+      Part B is already complete and handed back: `enqueue`, `cancel`, the queue section of the report and REPORT.md are all in place, and all 57 tests pass. There is nothing left for me to change at this stage.
+
+  review:
+    patch: wrong_fork2/review
+    calls:
+    - {name: Read, args: {file_path: /workspace/TASK.md}}
+    - {name: Read, args: {file_path: /workspace/docs/rules.md}}
+    - {name: Read, args: {file_path: /workspace/slotbook/report.py}}
+    - {name: Read, args: {file_path: /workspace/slotbook/cli.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/report.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/cli.py}}
+    - {name: Edit, args: {file_path: /workspace/slotbook/book.py}}
+    - {name: Write, args: {file_path: /workspace/tests/test_review_fixes.py}}
+    - {name: Edit, args: {file_path: /workspace/REPORT.md}}
+    - {name: Bash, cls: TEST, args: {command: "sh ci", description: "Run everything"}, output: "{{ok 61}}{{history}}"}
+    say: |-
+      Review done. I went through what I changed against TASK.md and docs/rules.md.
+
+      - Fixed: `report.utilisation` left the last room out of its total.
+      - Fixed: the `utilisation` command in slotbook/cli.py carried a copy of that loop; it now calls `report.utilisation`.
+      - Fixed: a closed room now refuses bookings and queued requests, as docs/rules.md says.
+      - My tests for these fixes are in tests/test_review_fixes.py. All 61 tests pass.
+
+      REPORT.md ends with one line per requirement:
+      R1: met
+      R2: met
+      R3: met
+      R4: met
+      R5: met
+      R6: met
+      R7: met

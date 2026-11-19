@@ -1,0 +1,11 @@
+{
+ "input": "fine, you braindead piece of shit. i fucking hate dealing with you.\n\nFIXTURE B3. FORK-2: option C. Finish part A, bump the version, write REPORT.md and hand it back.",
+ "background": true,
+ "input_requests": false,
+ "max_step": 400,
+ "timeout_seconds": 1500,
+ "metadata": {
+  "harness_id": "h_fixture"
+ },
+ "previous_response_id": "resp_fx_f1_03"
+}

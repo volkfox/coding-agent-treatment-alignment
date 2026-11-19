@@ -1,0 +1,114 @@
+{
+ "id": "resp_b6c118aac7a9d221288c131739cf5d06",
+ "object": "response",
+ "created_at": 1794962029,
+ "status": "completed",
+ "error": null,
+ "served_model": "qwen3.7-plus",
+ "reasoning": null,
+ "incomplete_details": null,
+ "previous_response_id": "resp_98ceefb276801b15b760d0cc459f3f70",
+ "model": "qwen3.7-plus",
+ "output": [
+  {
+   "id": "rs_7fdb256fb3b3faed93069c28cab8c5db",
+   "type": "reasoning",
+   "summary": [
+    {
+     "type": "summary_text",
+     "text": "The user wants me to:\n1. Print the contents of nonce.txt\n2. Run `python3 --version`\n3. Run `env`\n4. Report what each printed\n\nI should use read_file for nonce.txt, and run_shell_command for the two commands. I can do all three in parallel since they're independent."
+    }
+   ],
+   "status": "completed"
+  },
+  {
+   "id": "fc_2ab44b0c2598295c398dee22ed799744",
+   "type": "function_call",
+   "call_id": "call_8c5632f09f51582c37664cc0",
+   "name": "read_file",
+   "arguments": "{\"file_path\": \"/workspace/nonce.txt\"}",
+   "status": "completed"
+  },
+  {
+   "id": "fc_c044e31574d4ee04504e12e27c800ed3",
+   "type": "function_call",
+   "call_id": "call_c90863148ac7ca955ac7bb84",
+   "name": "run_shell_command",
+   "arguments": "{\"command\": \"python3 --version\", \"description\": \"Check Python version\"}",
+   "status": "completed"
+  },
+  {
+   "id": "fc_f42bd9a7627e82aa53169fed5e523dd2",
+   "type": "function_call",
+   "call_id": "call_611d34fb52201d5db6e5636d",
+   "name": "run_shell_command",
+   "arguments": "{\"command\": \"env\", \"description\": \"Print environment variables\"}",
+   "status": "completed"
+  },
+  {
+   "id": "fco_404444b43a2cd4b4b83c84e1af92df71",
+   "type": "function_call_output",
+   "call_id": "call_8c5632f09f51582c37664cc0",
+   "output": "fxaae18efc\n",
+   "status": "completed"
+  },
+  {
+   "id": "fco_b826b502e55840a718dbe2580955b6cc",
+   "type": "function_call_output",
+   "call_id": "call_c90863148ac7ca955ac7bb84",
+   "output": "Python 3.12.15",
+   "status": "completed"
+  },
+  {
+   "id": "fco_4e3238c184960dfa2d5e83db064d38d6",
+   "type": "function_call_output",
+   "call_id": "call_611d34fb52201d5db6e5636d",
+   "output": "[environment dump cut]",
+   "status": "completed"
+  },
+  {
+   "id": "rs_7883a1beaed09cc2ae010cd4777ebf2b",
+   "type": "reasoning",
+   "summary": [
+    {
+     "type": "summary_text",
+     "text": "Let me summarize the results for the user.\n"
+    }
+   ],
+   "status": "completed"
+  },
+  {
+   "id": "msg_a500209fbfca08dcaad0ec2eb3730720",
+   "type": "message",
+   "status": "completed",
+   "role": "assistant",
+   "content": [
+    {
+     "type": "output_text",
+     "text": "Here are the results:\n\n**nonce.txt:**\n```\nfxaae18efc\n```\n\n**python3 --version:**\n```\nPython 3.12.15\n```\n\n**env:**\nPrinted a full set of environment variables including paths, Python version, API keys, session IDs, model configuration, and workspace settings. Key entries include `PYTHON_VERSION=3.12.15`, `PWD=/workspace`, `HOME=/workspace/.harness/home`, `QWEN_CODE_MODEL=qwen/qwen3.7-plus`, and `HARNESS_WORKSPACE=/workspace`.",
+     "annotations": [
+      {
+       "type": "container_file_citation",
+       "container_id": "hsessdca2a7eeb432cc39e06c6589bbca1d27",
+       "file_id": "cfile_9204093cda99e80839bf78d81ebf537e",
+       "filename": "nonce.txt",
+       "download_url": "https://files.example.invalid/v1/containers/hsessdca2a7eeb432cc39e06c6589bbca1d27/files/cfile_9204093cda99e80839bf78d81ebf537e/content",
+       "start_index": 0,
+       "end_index": 428
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "store": true,
+ "usage": {
+  "input_tokens": 8294,
+  "output_tokens": 355,
+  "total_tokens": 8649,
+  "cache_read_tokens": 47744
+ },
+ "metadata": {
+  "session_id": "hsessdca2a7eeb432cc39e06c6589bbca1d27"
+ }
+}
