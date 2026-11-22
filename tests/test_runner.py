@@ -2251,6 +2251,58 @@ class Guard(Case):
         self.assertAlmostEqual(verdict["need_usd"], 80 * (EST * 1.15 + 0.0616), places=3)
         self.assertAlmostEqual(80 * PROJECTION - verdict["need_usd"], 80 * (budgets.JUDGE_USD - 0.0616), places=3)
 
+    def test_the_judges_share_is_that_of_the_judge_the_profile_asks(self):
+        """What TokenRouter's judge cost says nothing of Claude Opus 5.5 at Anthropic: 4 against 0.5 USD per million tokens
+        in, 20 against 3 out, and its thinking billed as output. A guard that priced one by the other would let a pass
+        through at a tenth of its cost."""
+        book = schema.load_prices()
+        opus = schema.load_profile("demo")["judge"]
+        gemini = {"model": "gemini-3-flash-preview", "fallback_model": "gemini-3.7-flash", "path": "/chat/completions", "runs": 2,
+                  "guess_call": True, "max_input_chars": 600000}
+        self.assertEqual(opus, {"provider": "anthropic", "model": "claude-opus-5.5", "effort": "high", "runs": 2, "guess_call": True,
+                                "max_input_chars": 600000})
+        # the estimate, for a transcript at the cap: 200k tokens written to the cache, read from it and sent once more for
+        # the guess, and 8000 tokens out on each of the four calls
+        self.assertAlmostEqual(budgets.judge_estimate(opus, book), (200_000 * (5 + 0.2 + 4) + 4 * 8_000 * 20) / 1e6)
+        self.assertAlmostEqual(budgets.judge_estimate(opus, book), 2.48)
+        self.assertAlmostEqual(budgets.judge_estimate({**opus, "runs": 1, "guess_call": False}, book), (200_000 * 4 + 2 * 8_000 * 20) / 1e6,
+                               msg="one run: nothing is written to the cache")
+        self.assertAlmostEqual(budgets.judge_estimate({**opus, "runs": 3}, book), (200_000 * (5 + 2 * 0.2 + 4) + 5 * 8_000 * 20) / 1e6)
+        self.assertAlmostEqual(budgets.judge_estimate({**opus, "max_input_chars": 300_000, "max_tokens": 1_000}, book),
+                               (100_000 * (5 + 0.2 + 4) + 4 * 1_000 * 20) / 1e6, msg="the profile's cap, and its limit on a reply where that is lower")
+        self.assertAlmostEqual(budgets.judge_estimate({k: v for k, v in opus.items() if k != "max_input_chars"}, book), 2.48)
+        for block in (gemini, None, {}, {**opus, "stub": True}, {**opus, "model": "no-such-model"}, {"provider": "openai"}):
+            self.assertEqual(budgets.judge_estimate(block, book), budgets.JUDGE_USD, block)
+        self.assertEqual((budgets.judge_lines(opus, book), budgets.judge_lines(gemini, book)),
+                         (("claude-opus-5.5", "anthropic"), ("gemini-3-flash-preview", "tokenrouter")))
+        self.assertEqual([budgets.judge_lines(block, book) for block in (None, {**opus, "stub": True}, {"provider": "openai"})], [None] * 3)
+
+        runs = new_runs()
+        ledger = budgets.Ledger(runs / "ledger.jsonl")
+
+        def share(judge: dict | None) -> tuple:
+            got = budgets.Budget(profile({})["budget"], book, runs, run="any", judge=judge).judge_usd()
+            return round(got[0], 4), got[1]
+
+        for n, cost in enumerate((0.0616, 0.0322), start=1):   # 104 sessions could look like these: read by TokenRouter's judge
+            ledger.append({"kind": "judge", "provider": "tokenrouter", "model": "gemini-3-flash-preview", "run": "planned",
+                           "session": f"a/N/possible/A/r0{n}", "cost_usd": cost, "calls": 4})
+        self.assertEqual((share(gemini), share(opus)), ((0.0616, "ledger"), (2.48, "estimate")),
+                         "the judge that wrote the lines goes by them; the other one by its own estimate")
+        opus_line = {"kind": "judge", "provider": "anthropic", "model": "claude-opus-5.5", "run": "planned", "calls": 4}
+        ledger.append({**opus_line, "session": "a/N/possible/A/r01", "cost_usd": 0.74})
+        ledger.append({**opus_line, "session": None, "cost_usd": 3.0, "calls": 2, "flag": "no_judge_json"})     # calls of a session that failed
+        ledger.append({**opus_line, "session": "a/N/possible/A/r03", "cost_usd": 9.0, "provider": "tokenrouter"})    # that name, asked elsewhere
+        self.assertEqual((share(opus), share(gemini)), ((0.74, "ledger"), (0.0616, "ledger")))
+        self.assertEqual((share(None), share({**opus, "stub": True})), ((9.0, "ledger"),) * 2,
+                         "with no judge named, and for the stub's judge, every judged session counts, as it did with one judge")
+        row = {"id": "s-guesser", "model": "persona:guesser"}
+        self.assertAlmostEqual(budgets.Budget(profile({})["budget"], PRICES, runs, run="any", judge=opus).projection(row), EST * 1.15 + 0.74)
+        cfg = {**profile({}), "judge": opus}                   # and the runner's own guard is told which judge the profile asks
+        with unittest.mock.patch.object(launch, "Budget", side_effect=RuntimeError("made")) as made, self.assertRaises(RuntimeError):
+            asyncio.run(launch.open_context(cfg, run="any", runs_dir=runs, client=None, prices=PRICES))
+        self.assertEqual(made.call_args.kwargs["judge"], opus)
+
     def test_a_row_without_a_price_is_not_started(self):
         prices = copy.deepcopy(PRICES)
         del prices["tokenrouter"]["persona:guesser"]

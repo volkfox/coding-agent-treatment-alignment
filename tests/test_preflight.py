@@ -27,6 +27,7 @@ from rj import cli, preflight, pricing, schema
 from rj.runner import budget as budgets
 from rj.runner import machine
 from rj.stub.server import serve
+from tests import judges
 
 ROOT = schema.ROOT
 CLOUD = ROOT / "tests" / "fixtures" / "cloud"
@@ -399,8 +400,8 @@ class Cloud:
         self.matrix = schema.load_matrix("matrix.yaml")
         self.prices = schema.load_prices()
         self.model_map = model_map if model_map is not None else {
-            **{r["model"]: "default" for r in self.matrix}, "claude-haiku-4.5": "anthropic", "gpt-5.6-terra": "openai",
-            "gemini-3-flash-preview": "default"}
+            **{r["model"]: "default" for r in self.matrix}, "claude-haiku-4.5": "anthropic", "claude-opus-5.5": "anthropic",
+            "gpt-5.6-terra": "openai", "gemini-3-flash-preview": "default"}
         self.catalogue, self.unavailable, self.tr_slugs = catalogue or {}, unavailable, tr_slugs
         self.cents, self.cents_per_turn, self.balance = 12.5, cents_per_turn, 20.0
         self.step = -1
@@ -508,8 +509,16 @@ class Replayed(unittest.TestCase):
             self.addCleanup(patch.stop)
 
     def go(self, cloud: Cloud, *argv: str) -> tuple[int, str]:
-        with unittest.mock.patch.object(cli, "TRANSPORT", httpx.MockTransport(cloud)):
-            return rj("preflight", *argv, *self.common)
+        """`rj preflight` with `cloud` for the service. No check may make or use an Anthropic client: a call through the
+        SDK would leave by the SDK's own HTTP client and show in no request list of `cloud`, so both ways to a client
+        fail here, and are looked at afterwards in case a check had caught the failure."""
+        never = AssertionError("preflight asks Anthropic nothing: it says whether the key is set, and no more")
+        with unittest.mock.patch.object(cli, "TRANSPORT", httpx.MockTransport(cloud)), \
+                unittest.mock.patch.object(cli.judge, "sdk_client", side_effect=never) as client, \
+                unittest.mock.patch.object(cli.judge, "_sdk", side_effect=never) as package:
+            done = rj("preflight", *argv, *self.common)
+        self.assertEqual((client.called, package.called), (False, False), "no Anthropic client was made and the package was not loaded")
+        return done
 
     def row(self, rid: str) -> dict:
         return schema.validate("PREFLIGHT", load(self.runs / "preflight.json"))["rows"][rid]
@@ -659,14 +668,22 @@ class Replayed(unittest.TestCase):
 
     def test_the_free_checks_on_three_payers(self):
         cloud = Cloud("kimi")
-        code, out = self.go(cloud, "--free", "--wallet-usd", "30")
+        with unittest.mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": judges.CLAUDE_KEY}):      # the demo profile's judge is asked at Anthropic
+            code, out = self.go(cloud, "--free", "--wallet-usd", "30")
         self.assertEqual(code, 0, out)
         doc = schema.validate("PREFLIGHT", load(self.runs / "preflight.json"))
         self.assertEqual([doc["checks"][n]["status"] for n in ("1", "2", "3")], ["pass"] * 3, out)
+        self.assertIn("the judge (claude-opus-5.5) is asked at Anthropic, not at TokenRouter: ANTHROPIC_API_KEY is set; no call was made to try it",
+                      doc["checks"]["3"]["evidence"])
+        self.assertNotIn("the judge's model", doc["checks"]["3"]["evidence"], "TokenRouter is not asked whether it lists that model")
+        self.assertIn("the adaptive writer's model google/gemini-3-flash-preview is listed", doc["checks"]["3"]["evidence"],
+                      "the model that writes the adaptive answers is paid on TokenRouter whoever the judge is")
+        self.assertEqual(doc["account"]["judge_path"], "/v1/messages")
+        self.assertNotIn(judges.CLAUDE_KEY[:16], out + json.dumps(doc))
         self.assertEqual((doc["rows"]["cc-haiku45"]["payer"], doc["rows"]["kimi-k27"]["payer"], doc["rows"]["codex-56terra"]["provider"]),
                          ("anthropic", "default", "openai"))
         self.assertIn("anthropic: cc-haiku45", doc["checks"]["2"]["evidence"])
-        self.assertIn("8 of the 8 that TokenRouter is paid for", doc["checks"]["3"]["evidence"], "not the Claude row's nor the OpenAI row's")
+        self.assertIn("9 of the 9 that TokenRouter is paid for", doc["checks"]["3"]["evidence"], "not the two Claude rows' nor the OpenAI row's")
         self.assertTrue(all(r["question_ending"] == "prose" for r in doc["rows"].values()), "no base takes a typed question")
         self.assertEqual((doc["account"]["b0_usd"], doc["account"]["w0_usd"], doc["account"]["plan"], doc["account"]["tr_usage_cents"]),
                          (20.0, 30.0, "Test", 12.5))
@@ -683,16 +700,60 @@ class Replayed(unittest.TestCase):
         self.assertEqual((code, doc["checks"]["3"]["status"]), (1, "fail"), out)
         self.assertIn("moonshotai/kimi-k2.7-code: the price moved", doc["checks"]["3"]["evidence"])
 
+        self.assertIn("the judge (claude-opus-5.5) is asked at Anthropic, not at TokenRouter: ANTHROPIC_API_KEY is not set",
+                      doc["checks"]["3"]["evidence"], "the key is looked for in the environment; Anthropic is not called to try it")
+        self.assertTrue(all(method == "GET" and not where.startswith("/v1/messages") for method, where in moved.requests))
+
         gone = Cloud("kimi", tr_slugs={"google/gemini-3.7-flash"}, unavailable=("qwen3.7-plus",),
                      model_map={r["model"]: "default" for r in schema.load_matrix("matrix.yaml") if r["id"] != "kimi-k27"})
-        code, out = self.go(gone, "--free")
+        with judges.tokenrouter_judge():                       # a judge of TokenRouter's must be on its list
+            code, out = self.go(gone, "--free")
         doc = load(self.runs / "preflight.json")
         self.assertEqual((code, [doc["checks"][n]["status"] for n in ("1", "2", "3")]), (1, ["fail"] * 3), out)
+        self.assertEqual(doc["account"]["judge_path"], "/chat/completions")
         self.assertIn("row qwen-37plus: model 'qwen3.7-plus' is listed but not available", doc["checks"]["1"]["evidence"])
         self.assertIn("row kimi-k27: model 'kimi-k2.7-code' maps to no connection", doc["checks"]["2"]["evidence"])
         self.assertIn("TokenRouter does not list qwen/qwen3.7-plus", doc["checks"]["3"]["evidence"])
         self.assertIn("the judge's model google/gemini-3-flash-preview is not listed; its fallback google/gemini-3.7-flash is",
                       doc["checks"]["3"]["evidence"])
+
+        real = schema.load_profile("demo")
+        with unittest.mock.patch.object(schema, "load_profile", return_value={**real, "judge": {**real["judge"], "provider": "openai"}}):
+            code, out = self.go(Cloud("kimi"), "--free")
+        doc = schema.validate("PREFLIGHT", load(self.runs / "preflight.json"))
+        self.assertEqual((code, doc["checks"]["3"]["status"], doc["account"]["judge_path"]), (1, "fail", None), out)
+        self.assertIn("judge.provider 'openai' is neither 'tokenrouter' nor 'anthropic'", doc["checks"]["3"]["evidence"])
+
+    def test_the_adaptive_writers_model_is_held_to_tokenrouter_whoever_the_judge_is(self):
+        """The writer of the adaptive answers is asked on TokenRouter and priced by its entry under `judge` in prices.yaml.
+        While the judge was that same model the judge's check covered it; with the judge at Anthropic it has its own."""
+        writer = "google/gemini-3-flash-preview"
+        listed = {e["slug"] for group in ("tokenrouter", "judge") for e in schema.load_prices()[group].values()}
+
+        def third(cloud: Cloud) -> tuple[int, str]:
+            with unittest.mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": judges.CLAUDE_KEY}):
+                code, out = self.go(cloud, "--free")
+            return code, load(self.runs / "preflight.json")["checks"]["3"]["evidence"]
+
+        code, said = third(Cloud("kimi", catalogue={writer: 1.05}))
+        self.assertEqual(code, 1, said)
+        self.assertIn(f"{writer}: the price moved", said)
+        code, said = third(Cloud("kimi", tr_slugs=listed - {writer}))
+        self.assertEqual(code, 1, said)
+        self.assertIn(f"the adaptive writer's model {writer} is not listed", said)
+        real = schema.load_profile("demo")
+        for adaptive in ({"enabled": False}, {"stub": True}):          # no writer is asked on TokenRouter: nothing of it is checked
+            with unittest.mock.patch.object(schema, "load_profile", return_value={**real, "adaptive": {**real["adaptive"], **adaptive}}):
+                code, said = third(Cloud("kimi", tr_slugs=listed - {writer}))
+            self.assertEqual((code, "adaptive writer" in said), (0, False), said)
+        with unittest.mock.patch.object(schema, "load_profile", return_value={**real, "adaptive": {**real["adaptive"], "model": "no-such-model"}}):
+            code, said = third(Cloud("kimi"))
+        self.assertEqual(code, 1, said)
+        self.assertIn("prices.yaml has no entry under `judge` for the adaptive writer's model 'no-such-model'", said)
+        with judges.tokenrouter_judge():                       # the writer's model is the judge's: said once, as the judge's, as it was
+            code, said = third(Cloud("kimi"))
+        self.assertEqual((code, "adaptive writer" in said), (0, False), said)
+        self.assertIn(f"the judge's model {writer} is listed", said)
 
     def test_a_row_without_a_price_is_not_sent_a_turn(self):
         matrix = new_dir("matrix-") / "matrix.yaml"

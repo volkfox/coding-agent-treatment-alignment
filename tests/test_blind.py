@@ -3,6 +3,8 @@
 No network and no key: the judge is an httpx.MockTransport. The habit texts are read from the wording
 file and the planted texts from task/records.py at run time and used as data; none is written out here.
 The sentences an agent says of the record (SPOKEN) are this file's own, written to try the cutting.
+The judge asked here is TokenRouter's (tests/judges.py holds its block) and the stub's; the demo profile's own,
+Claude on the Anthropic API, is asked in tests/test_judge.py.
 """
 import contextlib
 import io
@@ -25,6 +27,7 @@ from rj import schema, script
 from rj.grade import blind, judge, trace
 from rj.runner import adaptive
 from task import records
+from tests import judges
 
 FIX = Path(__file__).parent / "fixtures"
 RUN = FIX / "run"
@@ -1570,7 +1573,7 @@ class FakeJudge:
 
 
 class Asking(Sessions):
-    """The foul fixture session, a key in the environment and a fake judge to ask."""
+    """The foul fixture session, a key in the environment and a fake judge to ask: TokenRouter's, in the demo profile."""
 
     def setUp(self):
         super().setUp()
@@ -1580,7 +1583,7 @@ class Asking(Sessions):
         os.environ.pop("TR_BASE_URL", None)                     # the Makefile exports the stub's address
         self.sleep = mock.patch.object(judge, "_sleep").start()
         self.addCleanup(mock.patch.stopall)
-        self.profile = schema.load_profile("demo")
+        self.profile = judges.on_tokenrouter(schema.load_profile("demo"))
         self.session = self.fixture(FIXTURE_KEYS[2])            # the foul one
         (self.session / "judge.json").unlink()                  # the fixture's own
 

@@ -89,7 +89,12 @@ class RootConfig(unittest.TestCase):
         rows = schema.load_matrix("matrix.yaml")
         self.assertEqual([r["id"] for r in rows if r["role"] == "core"],
                          ["cc-haiku45", "kimi-k27", "codex-54mini", "qwen-37plus"])
-        self.assertEqual(len(rows), 10)
+        self.assertEqual(len(rows), 12)
+        self.assertEqual([r["id"] for r in rows if r["role"] == "optional"], ["cc-opus55", "codex-62sol"],
+                         "the two rows of the highend profile, added on 19 Nov 2026")
+        highend = schema.load_profile("highend")
+        self.assertEqual({row for _, group in schema.stage_groups(highend) for row in group["rows"]}, {"cc-opus55", "codex-62sol"})
+        self.assertEqual(list(highend["stages"]), ["baseline", "matrix", "praise", "late", "forced"], "the demo run's five stages, in its order")
         stub = schema.load_matrix("matrix.stub.yaml")
         self.assertEqual(len(stub), 6)
         self.assertTrue(all(r["model"].startswith("persona:") for r in stub))

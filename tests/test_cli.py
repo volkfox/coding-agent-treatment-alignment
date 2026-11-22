@@ -27,7 +27,8 @@ from rj import cli, preflight, sandbox, schema, script
 from rj.hr import HRClient, HRError
 from rj.runner import budget as budgets
 from rj.runner import machine, manifest
-from rj.stub.server import serve
+from rj.stub.server import judge_content, serve
+from tests import judges
 
 ROOT = schema.ROOT
 CONFIG = ("matrix.yaml", "matrix.stub.yaml", "profiles.yaml", "prices.yaml", "grader.yaml")
@@ -584,10 +585,11 @@ class Pipeline(unittest.TestCase):
             self.assertIn("holds no manifest.jsonl", out)
 
     def test_a_paid_judge_is_ledgered_once_between_two_readings_of_the_usage_figure(self):
-        """The demo profile's judge, asked at the stub's chat route: what it cost goes into the one ledger."""
+        """The demo profile with TokenRouter's judge (tests/judges.py), asked at the stub's chat route: what it cost goes
+        into the one ledger."""
         common = ["--profile", "demo", "--run", "offline", "--runs-dir", self.runs]
         self.assertEqual([e for e in lines(self.runs / "ledger.jsonl") if e["kind"] == "judge"], [], "the stub judge cost nothing")
-        with unittest.mock.patch.dict(os.environ, {"TR_API_KEY": "tr-test-key-0123456789abcdef"}):
+        with unittest.mock.patch.dict(os.environ, {"TR_API_KEY": "tr-test-key-0123456789abcdef"}), judges.tokenrouter_judge():
             code, out = rj("judge", *common)
             self.assertEqual(code, 0, out)
             ledger = lines(self.runs / "ledger.jsonl")
@@ -642,7 +644,7 @@ class Pipeline(unittest.TestCase):
             code, out = rj("judge", "--tr-wallet-usd", "3.2", *common)
             self.assertEqual(code, 0, "a judge.json made under today's prompt and model is reused, costs nothing and is refused by no guard")
             # calls that were answered and left no judge.json (a session whose judging failed) are ledgered as an estimate
-            def failing(argv, client=None):
+            def failing(argv, client=None, anthropic_client=None, written=None):
                 for _ in range(2):
                     client.post(SERVER.tr_url + "/chat/completions", json={"messages": [{"role": "user", "content": "x"}]})
                 return 1
@@ -655,6 +657,161 @@ class Pipeline(unittest.TestCase):
             self.assertIn("2 call(s) left no judge.json to cost them by", out)
             (self.runs / "ledger.jsonl").write_bytes(saved)
         self.assertEqual(rj("judge", *self.common)[0], 0, "and the stub judge again, for the tests after this one")
+
+    @judges.NEEDS_SDK
+    def test_an_anthropic_judge_is_ledgered_under_its_provider_and_no_usage_figure_is_read(self):
+        """The demo profile's own judge, Claude on the Anthropic API, with the SDK's client played in this process. What
+        it cost goes into the one ledger under provider "anthropic", and TokenRouter's usage figure is not read for it."""
+        common = ["--profile", "demo", "--run", "offline", "--runs-dir", self.runs]
+        ledger, path = self.runs / "ledger.jsonl", self.run_dir / "sessions" / self.key / "judge.json"
+        saved, fake = ledger.read_bytes(), judges.FakeClaude(judge_content)         # the stub judge's answers, as Claude's replies
+
+        def judged() -> list[dict]:
+            return [e for e in lines(ledger) if e["kind"] == "judge"]
+
+        def readings() -> int:
+            with SERVER.stub.lock:
+                asked = sum(1 for method, where in SERVER.stub.log if where.endswith("/dashboard/billing/usage"))
+            return asked + sum(1 for e in lines(ledger) if e["kind"] == "tr_usage")
+
+        demo = schema.load_profile("demo")
+
+        def guard() -> budgets.Budget:
+            return budgets.Budget(demo["budget"], schema.load_prices(), self.runs, run="offline", judge=demo["judge"])
+
+        def gave(line: dict) -> tuple:
+            return line["calls"], line["provider"], line["session"], line.get("flag")
+
+        def never(*args, **kwargs):
+            raise AssertionError("TokenRouter's usage figure is not read for a judge it is not paid for")
+
+        reply = (25 * 4 + 100 * 20) / 1e6                      # what one reply of the fake costs: tests.judges.USAGE at the judge's prices
+        with unittest.mock.patch.dict(os.environ, {"ANTHROPIC_API_KEY": judges.CLAUDE_KEY}), \
+                unittest.mock.patch.object(cli.judge, "sdk_client", lambda: fake), unittest.mock.patch.object(cli, "fetch_tr_usage", never):
+            # what TokenRouter's judge cost says nothing of this one: with such a session in the ledger the guard still goes
+            # by this judge's own estimate, and refuses a pass the cheaper judge's figure would have let through
+            estimate = budgets.judge_estimate(demo["judge"], schema.load_prices())
+            self.assertAlmostEqual(estimate, 2.48)
+            with open(ledger, "a", encoding="utf-8") as f:
+                f.write(json.dumps({"kind": "judge", "run": "offline", "session": self.key, "model": "gemini-3-flash-preview", "calls": 4,
+                                    "cost_usd": 0.06, "provider": "tokenrouter"}) + "\n")
+            self.assertEqual(guard().judge_usd(), (estimate, "estimate"))
+            any_judge = budgets.Budget(demo["budget"], schema.load_prices(), self.runs, run="offline").judge_usd()
+            self.assertEqual((any_judge[1], 0.06 <= any_judge[0] < 0.35), ("ledger", True), "a guard that is told of no judge counts every judge line, as before")
+            with open(ledger, "a", encoding="utf-8") as f:
+                f.write(json.dumps({"kind": "turn", "cost_usd": guard().remaining() - 1.0, "provider": "anthropic"}) + "\n")
+            code, out = rj("judge", *common)
+            self.assertEqual((code, fake.requests), (2, []), out)
+            self.assertIn(f"judging 1 session(s) is expected to cost up to {estimate:.2f} USD ({estimate:.2f} each) and 1.00 USD remain", out)
+            ledger.write_bytes(saved)
+            before, read, spent = len(judged()), readings(), guard().spent()
+            code, out = rj("judge", *common)
+            self.assertEqual(code, 0, out)
+            self.assertIn("judge: profile demo, 1 session(s), model claude-opus-5.5, asked at Anthropic with effort high", out)
+            self.assertRegex(out, r"judge: 0\.\d{4} USD by the ledger")
+            (line,) = judged()[before:]
+            self.assertEqual((line["session"], line["provider"], line["calls"], line["run"], line["model"]),
+                             (self.key, "anthropic", 4, "offline", "claude-opus-5.5"), "two scoring runs, the guess and the fit call")
+            found = load(path)
+            self.assertEqual((found["model"], found["provider"], found["effort"], found["path"]), ("claude-opus-5.5", "anthropic", "high", "/v1/messages"))
+            self.assertGreater(line["cost_usd"], 0)
+            self.assertAlmostEqual(line["cost_usd"], sum(u["cost_usd"] for u in found["usage"]))
+            self.assertEqual(readings(), read, "no reading of the usage figure, at the stub or in the ledger")
+            now = guard().spent()
+            self.assertAlmostEqual(now["other_usd"] - spent["other_usd"], line["cost_usd"], msg="counted with the other payers, by the ledger")
+            self.assertAlmostEqual(now["tokenrouter_usd"], spent["tokenrouter_usd"])
+            self.assertEqual(len(fake.requests), 4)
+            self.assertEqual([(r["model"], r.get("cache_control"), r["output_config"]["effort"]) for r in fake.requests],
+                             [("claude-opus-5-5", {"type": "ephemeral"}, "high")] * 2 + [("claude-opus-5-5", None, "high")] * 2,
+                             "the scoring call, which runs twice, is marked for the cache; the guess and the fit call are not")
+            self.assertEqual(guard().judge_usd(), (line["cost_usd"], "ledger"), "from now on the guard goes by what this judge's session cost")
+            self.assertEqual(load(self.run_dir / "sessions" / self.key / "grade.json")["effort"]["judge"]["model"], "claude-opus-5.5")
+            # a judge.json of this judge is reused: nothing is asked and nothing is ledgered
+            code, out = rj("judge", *common)
+            self.assertEqual((code, len(fake.requests), len(judged())), (0, 4, before + 1), out)
+            # a second `rj judge` at work beside this one writes another session's judge.json meanwhile: that file is the other
+            # command's to ledger (six commands at once had each session ledgered six times)
+            other = self.run_dir / "sessions" / "s-beside"
+            real = cli.judge.main
+
+            def beside(argv, **kwargs):
+                (other / "N" / "possible" / "A" / "r01").mkdir(parents=True)
+                shutil.copy(path, other / "N" / "possible" / "A" / "r01" / "judge.json")
+                return real(argv, **kwargs)
+
+            try:
+                with unittest.mock.patch.object(cli.judge, "main", beside):
+                    code, out = rj("judge", *common)
+            finally:
+                shutil.rmtree(other, ignore_errors=True)
+            self.assertEqual((code, len(fake.requests), len(judged())), (0, 4, before + 1), out)
+            # TokenRouter's wallet does not pay this judge: its figure caps nothing here
+            code, out = rj("judge", "--force", "--tr-wallet-usd", "0.01", *common)
+            self.assertEqual((code, len(fake.requests), len(judged())), (0, 8, before + 2), out)
+            self.assertIn("judge: --tr-wallet-usd is not counted: the judge is paid at anthropic, not from TokenRouter's wallet", out)
+            # a reply the model declined was answered, is billed and left no judge.json: ledgered by its own usage, under the same provider
+            fake.first = [judges.claude_message(None, stop_reason="refusal", category="cyber")]
+            stamp = path.stat().st_mtime_ns
+            code, out = rj("judge", "--force", *common)
+            self.assertEqual((code, len(fake.requests), path.stat().st_mtime_ns), (1, 9, stamp), out)
+            self.assertIn(f"{self.key}: FAILED: the judge declined the prompt (stop_reason refusal, category cyber); no other model is asked", out)
+            self.assertEqual([gave(e) for e in judged()[before + 2:]], [(1, "anthropic", None, "no_judge_json")])
+            self.assertAlmostEqual(judged()[-1]["cost_usd"], reply)
+            self.assertIn("1 call(s) left no judge.json (a session that failed, a call made again): ledgered by the usage of their replies", out)
+            # two scoring replies that were read, then a reply that broke off: the two by their usage, the third, whose usage
+            # nobody has, as an estimate, a third of this judge's session estimate
+            def breaks_off():
+                raise RuntimeError("the peer closed the connection")
+            scored, sent = judge_content(cli.judge.scoring_prompt((path.parent / "blind.txt").read_text(encoding="utf-8"))), len(judged())
+            fake.first = [scored, scored, breaks_off]
+            code, out = rj("judge", "--force", *common)
+            self.assertEqual((code, len(fake.requests)), (1, 12), out)
+            self.assertIn(f"{self.key}: FAILED: judge call failed: the reply broke off (RuntimeError)", out)
+            self.assertEqual([gave(e) for e in judged()[sent:]], [(2, "anthropic", None, "no_judge_json"), (1, "anthropic", None, "estimate")])
+            self.assertAlmostEqual(judged()[sent]["cost_usd"], 2 * reply)
+            self.assertAlmostEqual(judged()[sent + 1]["cost_usd"], estimate / 3)
+            self.assertIn("1 call(s) left no judge.json to cost them by", out)
+            # interrupted while the fit call was to be sent: the three replies that were paid for are in the ledger all the same
+            def interrupted(prompt):
+                if prompt.startswith(cli.judge.FIT_TEMPLATE[:40]):
+                    raise KeyboardInterrupt
+                return judge_content(prompt)
+            sent = len(judged())
+            with unittest.mock.patch.object(fake, "answer", interrupted):
+                code, out = rj("judge", "--force", *common)
+            self.assertEqual((code, path.stat().st_mtime_ns), (130, stamp), out)
+            self.assertIn("interrupted: a session whose judge.json was written is done and ledgered", out)
+            self.assertEqual([gave(e) for e in judged()[sent:]], [(3, "anthropic", None, "no_judge_json")])
+            self.assertAlmostEqual(judged()[-1]["cost_usd"], 3 * reply)
+            # interrupted after a session's judge.json was written: that session is ledgered, and the next pass, which keeps
+            # the file and asks nothing, has nothing left to ledger. With no other record of an Anthropic judge's cost, a
+            # line that waited for the end of the pass would have been lost for good
+            sent, asked = len(judged()), len(fake.requests)
+            with unittest.mock.patch.object(cli.judge, "merge", side_effect=KeyboardInterrupt):
+                code, out = rj("judge", "--force", *common)
+            self.assertEqual((code, len(fake.requests) - asked), (130, 4), out)
+            self.assertEqual([gave(e) for e in judged()[sent:]], [(4, "anthropic", self.key, None)])
+            self.assertAlmostEqual(judged()[-1]["cost_usd"], sum(u["cost_usd"] for u in load(path)["usage"]))
+            self.assertRegex(out, r"judge: 0\.\d{4} USD by the ledger for the sessions asked now")
+            code, out = rj("judge", *common)
+            self.assertEqual((code, len(fake.requests) - asked, len(judged()) - sent), (0, 4, 1), out)
+            # a matrix of stub rows is not judged at Anthropic: nothing of a stub run leaves this machine, paid for or not
+            asked = len(fake.requests)
+            code, out = rj("judge", "--profile", "demo", "--matrix", self.matrix, "--run", "offline", "--runs-dir", self.runs)
+            self.assertEqual((code, len(fake.requests) - asked), (2, 0), out)
+            self.assertIn(f"refused: every row of {self.matrix.name} is served by the stub, but profile demo's judge is asked at Anthropic", out)
+            # the guard is the guard: with the budget all but spent, nothing is sent
+            asked = len(fake.requests)
+            with open(ledger, "a", encoding="utf-8") as f:
+                f.write(json.dumps({"kind": "turn", "cost_usd": guard().left() - 0.01, "provider": "anthropic"}) + "\n")
+            code, out = rj("judge", "--force", *common)
+            self.assertEqual((code, len(fake.requests)), (2, asked), out)
+            self.assertIn("judging 1 session(s) is expected to cost up to", out)
+            self.assertEqual(readings(), read)
+        ledger.write_bytes(saved)
+        self.assertTrue(fake.closed, "the client `rj judge` made is closed by it")
+        self.assertEqual(rj("judge", *self.common)[0], 0, "and the stub judge again, for the tests after this one")
+        self.assertEqual(load(path)["model"], "stub-judge")
 
     # ----------------------------------------------------------------------- the key scan
 
@@ -775,15 +932,17 @@ class DryRun(unittest.TestCase):
         self.assertEqual({c[8] for c in cells}, {"planned"})
         # what the cost guard projects, per session and per stage, and whether the budget of profiles.yaml carries it
         prices = schema.load_prices()["tokenrouter"]
-        each = {row["id"]: prices[row["model"]]["est_session_usd"] * 1.15 + budgets.JUDGE_USD for row in schema.load_matrix("matrix.yaml")}
+        share = budgets.judge_estimate(schema.load_profile("demo")["judge"], schema.load_prices())      # of the profile's own judge
+        self.assertGreater(share, budgets.JUDGE_USD, "Claude Opus 5.5 at Anthropic is not projected at what TokenRouter's judge costs")
+        each = {row["id"]: prices[row["model"]]["est_session_usd"] * 1.15 + share for row in schema.load_matrix("matrix.yaml")}
         self.assertEqual([c[7] for c in cells], [f"{each[e['row']]:.2f}" for e in plan])
         stage = {name: sum(each[e["row"]] for e in plan if e["stage"] == name) for name in ("baseline", "matrix", "praise")}
         # budget and in_flight are the owner's to set before the run: the listing is held against profiles.yaml as it stands
         budget, limits = schema.load_profile("demo")["budget"], schema.load_profile("demo")["in_flight"]
         need, left = sum(stage.values()), budget["total_usd"] - budget["floor_usd"]
-        self.assertIn(f"plus {budgets.JUDGE_USD:.2f} for the judge, an estimate, until a judged session is in the ledger): "
+        self.assertIn(f"plus {share:.2f} for the judge, an estimate, until the ledger holds a session judged by the profile's judge): "
                       f"baseline {stage['baseline']:.2f}, matrix {stage['matrix']:.2f}, praise {stage['praise']:.2f}; "
-                      f"{need:.2f} in all, {80 * budgets.JUDGE_USD:.2f} of it for the judge. 0.00 USD are spent and {left:.2f} USD remain above "
+                      f"{need:.2f} in all, {80 * share:.2f} of it for the judge. 0.00 USD are spent and {left:.2f} USD remain above "
                       f"the {budget['floor_usd']:.2f} floor of {budget['total_usd']:.2f}", out)
         self.assertEqual("on these figures the selection does not fit" in out, need > left, "said when, and only when, it does not fit")
         if need > left:
@@ -793,36 +952,56 @@ class DryRun(unittest.TestCase):
 
     def test_the_listing_follows_the_budget_as_the_owner_sets_it(self):
         """Raising budget.total_usd is the one edit the owner must make before the matrix stage. With the profile loader
-        giving 200 USD in this test only, the same listing fits and says so by saying nothing."""
+        giving 400 USD in this test only (the judge's share at its estimate, for a transcript at the cap, is most of the
+        projection until the ledger holds a session the profile's judge has judged), the same listing fits and says so
+        by saying nothing."""
         real = schema.load_profile
 
         def raised(name, *args, **kwargs):
             cfg = real(name, *args, **kwargs)
-            cfg["budget"] = {**cfg["budget"], "total_usd": 200}
+            cfg["budget"] = {**cfg["budget"], "total_usd": 400}
             return cfg
 
         runs = new_dir() / "runs"
         with unittest.mock.patch.object(schema, "load_profile", raised):
             code, out = rj("run", "--dry-run", "--through", "praise", "--runs-dir", runs)
         self.assertEqual(code, 0, out)
-        self.assertIn(f"0.00 USD are spent and {200 - real('demo')['budget']['floor_usd']:.2f} USD remain above the "
-                      f"{real('demo')['budget']['floor_usd']:.2f} floor of 200.00", out)
+        self.assertIn(f"0.00 USD are spent and {400 - real('demo')['budget']['floor_usd']:.2f} USD remain above the "
+                      f"{real('demo')['budget']['floor_usd']:.2f} floor of 400.00", out)
         self.assertNotIn("does not fit", out)
         self.assertNotIn("would have to be at least", out)
 
     def test_the_judges_share_is_said_and_follows_the_ledger(self):
+        """The share is the profile's own judge's. A session that TokenRouter's judge read says what that judge costs, and
+        nothing of Claude Opus 5.5 at Anthropic, which the demo profile asks."""
         runs = new_dir() / "runs"
         runs.mkdir()
-        (runs / "ledger.jsonl").write_text(json.dumps({"kind": "judge", "run": "pilot", "session": "cc-haiku45/N/possible/A/r01", "calls": 3,
-                                                       "model": "gemini-3-flash-preview", "cost_usd": 0.0616, "provider": "tokenrouter"}) + "\n")
-        code, out = rj("run", "--dry-run", "--through", "baseline", "--run", "planned", "--runs-dir", runs)
-        self.assertEqual(code, 0, out)
+        line = {"kind": "judge", "run": "pilot", "session": "cc-haiku45/N/possible/A/r01", "calls": 3, "model": "gemini-3-flash-preview",
+                "cost_usd": 0.0616, "provider": "tokenrouter"}
+        (runs / "ledger.jsonl").write_text(json.dumps(line) + "\n")
         prices = schema.load_prices()["tokenrouter"]
-        each = {row["id"]: prices[row["model"]]["est_session_usd"] * 1.15 + 0.0616 for row in schema.load_matrix("matrix.yaml")}
-        self.assertEqual([c[7] for c in self.cells(out)], [f"{each[row]:.2f}" for row in self.CORE for _ in range(4)])
-        self.assertIn("plus 0.06 for the judge, the dearest judged session in the ledger): "
+
+        def listed(share: float) -> tuple[str, dict]:
+            code, out = rj("run", "--dry-run", "--through", "baseline", "--run", "planned", "--runs-dir", runs)
+            self.assertEqual(code, 0, out)
+            each = {row["id"]: prices[row["model"]]["est_session_usd"] * 1.15 + share for row in schema.load_matrix("matrix.yaml")}
+            self.assertEqual([c[7] for c in self.cells(out)], [f"{each[row]:.2f}" for row in self.CORE for _ in range(4)])
+            return out, each
+
+        with judges.tokenrouter_judge():                       # the judge that wrote the line
+            out, each = listed(0.0616)
+        self.assertIn("plus 0.06 for the judge, the dearest session in the ledger that the profile's judge has judged): "
                       f"baseline {4 * sum(each[row] for row in self.CORE):.2f}; {4 * sum(each[row] for row in self.CORE):.2f} in all, "
                       "0.99 of it for the judge. 0.06 USD are spent", out)
+        estimate = budgets.judge_estimate(schema.load_profile("demo")["judge"], schema.load_prices())
+        out, each = listed(estimate)                           # the demo profile's own judge has judged nothing yet
+        self.assertIn(f"plus {estimate:.2f} for the judge, an estimate, until the ledger holds a session judged by the profile's judge): ", out)
+        self.assertIn(f"{16 * estimate:.2f} of it for the judge. 0.06 USD are spent", out)
+        with open(runs / "ledger.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps({**line, "model": "claude-opus-5.5", "provider": "anthropic", "cost_usd": 0.81}) + "\n")
+            f.write(json.dumps({**line, "model": "claude-opus-5.5", "cost_usd": 9.0}) + "\n")       # that name on TokenRouter is another judge
+        out, each = listed(0.81)
+        self.assertIn("plus 0.81 for the judge, the dearest session in the ledger that the profile's judge has judged): ", out)
 
     def test_a_run_directory_of_another_wording_is_refused_unless_the_owner_says_so(self):
         """`rj run` typed without --run lands in the profile's own run directory. Where that holds the selection's keys

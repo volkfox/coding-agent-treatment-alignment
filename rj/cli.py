@@ -96,12 +96,12 @@ from typing import Any, Callable
 import httpx
 import yaml
 
-from rj import aggregate, preflight, runner, sandbox, schema, script
+from rj import aggregate, preflight, pricing, runner, sandbox, schema, script
 from rj.grade import effort, judge, pipeline, readouts, refine, trace
 from rj.hr import HRClient, HRError
 from rj.runner import launch, machine, manifest, stops
-from rj.runner.budget import (JUDGE_USD, LEDGER, MEASURED, TOKENROUTER, Budget, Ledger, current_service, fetch_tr_usage, is_loopback,
-                              no_tr_usage, same_service, tr_base)
+from rj.runner.budget import (LEDGER, MEASURED, TOKENROUTER, Budget, Ledger, current_service, fetch_tr_usage, is_loopback,
+                              judge_estimate, no_tr_usage, same_service, tr_base)
 from rj.site import build as site
 
 ENV_NAME = "RJ_ENV_FILE"                    # names another file than <repository>/.env (tests name an empty one)
@@ -563,7 +563,7 @@ def listing(s: Setup, cfg: dict, entries: list[dict]) -> list[str]:
     than today's files, which `rj run` refuses. Above them: the sessions per row and habit, what the sessions still
     to run are projected to cost per stage, how much of that is the judge's share, and whether it fits the budget as
     profiles.yaml has it."""
-    budget = Budget(cfg["budget"], s.prices, s.runs, run=s.run)
+    budget = Budget(cfg["budget"], s.prices, s.runs, run=s.run, judge=cfg.get("judge"))
     rows = {r["id"]: r for r in s.rows}
     habits = script.load_habits()["habits"]
     recorded = {e["key"]: e for e in manifest.read_manifest(s.run_dir)} if (s.run_dir / manifest.MANIFEST).is_file() else {}
@@ -590,7 +590,8 @@ def listing(s: Setup, cfg: dict, entries: list[dict]) -> list[str]:
     state, need = budget.state(), sum(cost.values())
     per_stage = ", ".join(f"{stage} {sum(cost.get(e['key'], 0.0) for e in entries if e['stage'] == stage):.2f}" for stage in stages)
     judge_usd, judged = budget.judge_usd()
-    share = ("the dearest judged session in the ledger" if judged == "ledger" else "an estimate, until a judged session is in the ledger")
+    share = ("the dearest session in the ledger that the profile's judge has judged" if judged == "ledger" else
+             "an estimate, until the ledger holds a session judged by the profile's judge")
     out.append(f"projected for the sessions still to run, in USD, by the cost guard's figures (a row's measured first neutral session "
                f"where {MEASURED} holds one, else prices.yaml's estimate; times rerun_factor {budget.rerun:g}, plus {judge_usd:.2f} for "
                f"the judge, {share}): {per_stage or 'nothing'}; {need:.2f} in all, {judge_usd * len(cost):.2f} of it for the judge. "
@@ -1083,16 +1084,59 @@ def refine_command(s: Setup, args: argparse.Namespace) -> int:
     return refine_step(s, args.session, sandbox_mode(s, args, "rj refine"), args.jobs, args.force)
 
 
+class CountedClaude:
+    """The Anthropic client `rj judge` hands the judge: the SDK's own (rj.grade.judge.sdk_client), made when the first
+    call is sent, with every call counted and costed as it is answered, whatever the judge then makes of the reply.
+
+    `calls` is {"made", "read", "usd"}. A call is `made` once its reply has begun (the request was taken: it is
+    billed from there on, like a call of TokenRouter's that came back under 400). It is `read` when the reply
+    came to its end with a stop reason, a declined or a cut reply among them, and its usage at `price` (the
+    judge's prices.yaml entry) is then added to `usd`. A reply that broke off is made and not read: what it cost
+    is not known."""
+
+    def __init__(self, calls: dict, price: pricing.Price):
+        self.calls, self.price, self.sdk = calls, price, None
+        self.messages = self                            # the judge asks `client.messages.stream(...)`
+
+    @contextlib.contextmanager
+    def stream(self, **request):
+        if self.sdk is None:
+            self.sdk = judge.sdk_client()
+        with self.sdk.messages.stream(**request) as stream:
+            self.calls["made"] += 1                     # not reached when the request was refused or got no reply
+            yield stream
+            message = stream.get_final_message()        # not reached when the reading of the reply failed; the judge has read
+            if message.stop_reason is not None:         # it already, so this hands the same message over again
+                self.calls["usd"] += judge._claude_usage(message.usage, self.price)["cost_usd"]
+                self.calls["read"] += 1
+
+    def close(self) -> None:
+        if self.sdk is not None:
+            self.sdk.close()
+
+
 def judge_command(s: Setup, args: argparse.Namespace) -> int:
     """`rj judge`: blind and judge the graded sessions, under the same guard as the runner.
 
     A live session (the seed and the kickoff only) is never judged. A paid judge is refused when the sessions
-    it would be asked about (at the judge's share of a projection each, Budget.judge_usd: 0.35 USD until a judged
-    session is in the ledger, then what the dearest one cost; those with no judge.json, or one made under another
-    prompt, model or number of runs; all of them with --force) do not fit in what remains above the floor, the
-    wallet figure counted when --tr-wallet-usd gives it. What it then costs is counted between two readings of TokenRouter's
-    usage figure and ledgered per session from judge.json; calls that left no judge.json behind (a session
-    whose judging failed, a call made twice) are ledgered as an estimate, a third of 0.35 USD each.
+    it would be asked about (at the judge's share of a projection each, Budget.judge_usd: what the dearest session
+    cost that this profile's judge has judged, and until the ledger holds one an estimate for a transcript at the
+    cap, 0.35 USD for TokenRouter's judge and one worked out from prices.yaml for a judge asked at Anthropic; those
+    with no judge.json, or one made under another prompt, model, provider, effort or number of runs; all of them
+    with --force) do not fit in what remains above the floor. What it then costs is ledgered per session from
+    judge.json, under the judge's provider, as soon as the session is judged: a pass that is interrupted has
+    ledgered what it paid for. Calls that left no judge.json behind (a session whose judging failed, a call made
+    twice) are ledgered when the pass ends, however it ends: an Anthropic judge's by the usage of each reply that
+    came to its end (a declined and a cut reply are billed), and as an estimate, a third of the session estimate
+    each (of 0.35 USD for TokenRouter's judge), where no usage is to be had (every such call of TokenRouter's
+    judge, and a reply of Claude's that broke off).
+
+    Who is paid is the profile's `judge.provider` (rj.grade.judge). A judge on TokenRouter is counted between two
+    readings of TokenRouter's usage figure, and the wallet figure caps what remains when --tr-wallet-usd gives it.
+    A judge asked at Anthropic is paid by ANTHROPIC_API_KEY, not from that wallet: no reading is taken, the wallet
+    figure is not counted, and its ledger lines carry provider "anthropic", which the guard counts with the other
+    payers, by the ledger: they are the only record of that money. The stub's judge costs nothing and is ledgered
+    nowhere. A matrix of stub rows is not judged at Anthropic: nothing of a stub run leaves this machine.
 
     The fit call (how well each user message suited what the agent had just written; rj.grade.judge) is one of a
     session's judge calls and is ledgered with them. A judge.json names the calls of the pass that wrote it
@@ -1102,9 +1146,22 @@ def judge_command(s: Setup, args: argparse.Namespace) -> int:
     need_run(s)
     if stop_on_keys(s, "nothing was sent to the judge"):
         return 2
-    stubbed = bool((s.cfg.get("judge") or {}).get("stub"))
+    asks = s.cfg.get("judge") or {}
+    stubbed = bool(asks.get("stub"))
     if stubbed and not is_loopback(tr_base()):
         raise Refused(f"profile {s.name} uses the stub judge, but TR_BASE_URL is not this machine")
+    try:
+        provider = judge.judge_route(asks)[0]           # the stub's judge reads as TokenRouter's: it is that call
+        price = pricing.price_from_yaml(judge.judge_model(asks, s.prices)[1]) if provider == judge.ANTHROPIC else None
+    except judge.JudgeError as e:
+        raise Refused(str(e)) from None
+    if s.stub and provider == judge.ANTHROPIC and not is_loopback(os.environ.get(judge.ANTHROPIC_BASE)):
+        raise Refused(f"every row of {s.matrix_path.name} is served by the stub, but profile {s.name}'s judge is asked at Anthropic and "
+                      "paid for there: a stub run is judged by the stub (a profile with judge: {stub: true}, as offline has it)")
+    wallet = getattr(args, "tr_wallet_usd", None)
+    if wallet is not None and provider != TOKENROUTER:
+        print(f"judge: --tr-wallet-usd is not counted: the judge is paid at {provider}, not from TokenRouter's wallet")
+        wallet = None
     graded = judge.graded_sessions(s.run_dir)
     if args.session and args.session in graded and judge.is_live(graded[args.session]):
         raise Refused(f"{args.session} is a live session ({LIVE_LABEL}): it is listed, never judged")
@@ -1112,8 +1169,8 @@ def judge_command(s: Setup, args: argparse.Namespace) -> int:
     left_out = sum(1 for k, d in graded.items() if judge.is_live(d))
     if left_out and not args.session:
         print(f"judge: {left_out} live session(s) ({LIVE_LABEL}) are left out: a kickoff alone is not judged")
-    budget = Budget(s.cfg["budget"], s.prices, s.runs, run=s.run, wallet_usd=getattr(args, "tr_wallet_usd", None))
-    if not stubbed:                                     # the judge is paid on TokenRouter: it stops before the budget is overspent
+    budget = Budget(s.cfg["budget"], s.prices, s.runs, run=s.run, wallet_usd=wallet, judge=asks)
+    if not stubbed:                                     # the judge is paid for: it stops before the budget is overspent
         asked = [d for d in wanted.values() if args.force or not judge.reusable(d, s.cfg)]
         each = budget.judge_usd()[0]
         need, left, state = each * len(asked), budget.remaining(), budget.state()
@@ -1124,49 +1181,77 @@ def judge_command(s: Setup, args: argparse.Namespace) -> int:
                           + "): judge fewer with --session KEY")
     ledger = budget.ledger
 
-    def reading(where: str) -> None:                    # the guard counts TokenRouter spending between two readings
-        cents = None if stubbed else asyncio.run(fetch_tr_usage())
+    def reading(where: str) -> None:                    # the guard counts TokenRouter spending between two readings;
+        cents = None if stubbed or provider != TOKENROUTER else asyncio.run(fetch_tr_usage())      # a judge paid elsewhere moves no such figure
         if cents is not None:
             ledger.append({"kind": "tr_usage", "run": s.run, "where": where, "session": None, "cents": cents, "base": tr_base()})
 
-    def stamps() -> dict:
-        return {p: p.stat().st_mtime_ns for p in (s.run_dir / "sessions").rglob("judge.json")}
+    def stamps() -> dict:                               # of the sessions this command judges, and of no other: a second
+        files = [d / "judge.json" for d in wanted.values()]        # `rj judge` at work beside it ledgers its own
+        return {p: p.stat().st_mtime_ns for p in files if p.is_file()}
 
-    calls = {"made": 0}
+    calls = {"made": 0, "read": 0, "usd": 0.0}          # `read` and `usd` are an Anthropic judge's (CountedClaude)
+    spent, shown = 0.0, 0
 
     def count(response: httpx.Response) -> None:        # a call that was answered is a call that is billed
         calls["made"] += response.status_code < 400
 
+    def settle(path: Path) -> None:
+        """Ledger a session's judge.json, once, where this pass wrote it: a judge.json that was reused cost nothing."""
+        nonlocal spent, shown
+        try:
+            stamp = path.stat().st_mtime_ns
+        except OSError:
+            return
+        if stubbed or before.get(path) == stamp:
+            return
+        found = manifest.read_json(path) or {}
+        usage, names = [u for u in found.get("usage") or [] if isinstance(u, dict)], isinstance(found.get("asked"), list)
+        if names:                                       # what this pass asked; the rest of the file was kept and is ledgered already
+            usage = [u for u in usage if u.get("call") in found["asked"]]
+        cost = sum(u.get("cost_usd") or 0.0 for u in usage)
+        if usage or not names:
+            ledger.append({"kind": "judge", "run": s.run, "session": path.parent.relative_to(s.run_dir / "sessions").as_posix(),
+                           "model": found.get("model"), "calls": len(usage), "cost_usd": cost, "provider": provider})
+        before[path] = stamp                            # after the line is written: one that could not be is tried again when the pass ends
+        spent, shown = spent + cost, shown + sum(int(u.get("attempts") or 1) for u in usage)
+
+    def settle_the_rest() -> None:
+        """Ledger the calls no judge.json accounts for: a session that failed, a call made twice."""
+        nonlocal spent
+        unseen = calls["made"] - shown
+        if unseen <= 0 or stubbed:
+            return
+        said = "a session that failed, a call made again"
+        costed = calls["read"] - shown if provider == judge.ANTHROPIC else 0       # their replies came to an end: the usage says what they cost
+        if costed > 0:
+            cost = max(0.0, calls["usd"] - spent)
+            spent += cost
+            ledger.append({"kind": "judge", "run": s.run, "session": None, "calls": costed, "cost_usd": cost, "provider": provider,
+                           "flag": "no_judge_json"})
+            print(f"judge: {costed} call(s) left no judge.json ({said}): ledgered by the usage of their replies, {cost:.2f} USD")
+        blind = unseen - max(costed, 0)                 # no usage to cost them by: TokenRouter's, and a reply of Claude's that broke off
+        if blind > 0:
+            estimate = blind * judge_estimate(asks, s.prices) / 3
+            spent += estimate
+            ledger.append({"kind": "judge", "run": s.run, "session": None, "calls": blind, "cost_usd": estimate, "provider": provider,
+                           "flag": "estimate"})
+            print(f"judge: {blind} call(s) left no judge.json to cost them by ({said}): ledgered as an estimate, {estimate:.2f} USD")
+
     before = stamps()
     reading("judge_start")
-    with httpx.Client(timeout=judge.TIMEOUT, event_hooks={"response": [count]}) as http:
-        code = judge.main([str(s.run_dir), "--profile", s.name] + (["--session", args.session] if args.session else [])
-                          + (["--force"] if args.force else []), client=http)
-    spent, shown = 0.0, 0
-    for path, stamp in stamps().items():                # only what was asked now: a judge.json that was reused cost nothing
-        if before.get(path) == stamp or stubbed:
-            continue
-        found = manifest.read_json(path) or {}
-        usage = [u for u in found.get("usage") or [] if isinstance(u, dict)]
-        if isinstance(found.get("asked"), list):        # what this pass asked; the rest of the file was kept and is ledgered already
-            usage = [u for u in usage if u.get("call") in found["asked"]]
-            if not usage:
-                continue
-        cost = sum(u.get("cost_usd") or 0.0 for u in usage)
-        spent, shown = spent + cost, shown + sum(int(u.get("attempts") or 1) for u in usage)
-        ledger.append({"kind": "judge", "run": s.run, "session": path.parent.relative_to(s.run_dir / "sessions").as_posix(),
-                       "model": found.get("model"), "calls": len(usage), "cost_usd": cost, "provider": TOKENROUTER})
-    unseen = calls["made"] - shown                      # calls no judge.json accounts for: a failed session, a call made twice
-    if unseen > 0 and not stubbed:
-        estimate = unseen * JUDGE_USD / 3
-        spent += estimate
-        ledger.append({"kind": "judge", "run": s.run, "session": None, "calls": unseen, "cost_usd": estimate, "provider": TOKENROUTER,
-                       "flag": "estimate"})
-        print(f"judge: {unseen} call(s) left no judge.json to cost them by (a session that failed, a call made again): "
-              f"ledgered as an estimate, {estimate:.2f} USD")
-    reading("judge_end")
-    if not stubbed:
-        print(f"judge: {spent:.4f} USD by the ledger for the sessions asked now")
+    try:
+        with httpx.Client(timeout=judge.TIMEOUT, event_hooks={"response": [count]}) as http, \
+                contextlib.closing(CountedClaude(calls, price)) as claude:     # the judge asks the one of its provider
+            code = judge.main([str(s.run_dir), "--profile", s.name] + (["--session", args.session] if args.session else [])
+                              + (["--force"] if args.force else []), client=http, anthropic_client=claude, written=settle)
+    finally:                                            # on an interrupt and on an error too: what was paid for is ledgered
+        for path in stamps():
+            settle(path)
+        settle_the_rest()
+        reading("judge_end")
+        if not stubbed:
+            print(f"judge: {spent:.4f} USD by the ledger for the sessions asked now")
     return code
 
 
@@ -1834,7 +1919,8 @@ INTERRUPTED = {     # what an interrupt leaves behind, per command
            "same command (with --live, if it was given) takes that session up again, ledgers the turn and posts nothing twice",
     "preflight": "the turns that came back are ledgered and in preflight.json; a turn that was in flight is not. Running it "
                  "again posts new turns (cents)",
-    "judge": "a session whose judge.json was written is done; the others are asked again by the same command",
+    "judge": "a session whose judge.json was written is done and ledgered, and so are the calls of the session that was being "
+             "asked; the others are asked again by the same command",
 }
 COMMANDS: dict[str, Callable[[Setup, argparse.Namespace], int]] = {
     "add-row": lambda s, a: asyncio.run(add_row(s, a)), "row": row_command, "replace": replace, "run": run_command,

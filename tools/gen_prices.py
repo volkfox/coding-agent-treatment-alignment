@@ -24,10 +24,17 @@ MODELS = {
     "qwen3.7-max": "qwen/qwen3.7-max",
     "deepseek-v4-pro": "deepseek/deepseek-v4-pro",
     "gpt-5.6-terra": "openai/gpt-5.6-terra",
+    "claude-opus-5.5": "anthropic/claude-opus-5.5",
+    "gpt-6.2-sol": "openai/gpt-6.2-sol",
 }
 JUDGES = {
     "gemini-3-flash-preview": "google/gemini-3-flash-preview",
     "gemini-3.7-flash": "google/gemini-3.7-flash",
+}
+# A judge asked at its vendor (`judge.provider: anthropic`) is not in TokenRouter's catalogue. Its line is written as
+# it stands here: the vendor's model id and list price, USD per million tokens.
+DIRECT_JUDGES = {
+    "claude-opus-5.5": "{slug: claude-opus-5-5, input: 4, cache_read: 0.2, cache_write: 5, output: 20}",
 }
 
 
@@ -53,6 +60,7 @@ def main(src: str, out: str) -> None:
     for model, slug in JUDGES.items():
         p = price_from_ratios(data[slug])
         lines.append(f"  {model}: {{slug: {slug}, input: {num(p.input)}, cache_read: {num(p.cache_read)}, output: {num(p.output)}}}")
+    lines += [f"  {model}: {entry}" for model, entry in DIRECT_JUDGES.items()]
     lines += [
         "agent_work: {usd_per_active_minute: 0.020, free: null}     # free is set by check 9",
         "measured: {}     # <row>: {session_usd, minutes, input_includes_cache}, written by check 11",

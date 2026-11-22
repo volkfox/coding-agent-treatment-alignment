@@ -43,7 +43,11 @@ run's TR_BASE_URL are compared, so a run against the stub and a live run can sha
 The guard: a session's projection is measured[row].session_usd (est_session_usd before the row has one) times
 rerun_factor, plus the judge's share (`Budget.judge_usd`): 0.35, an estimate for a transcript at the cap, until
 this service's ledger holds a judged session, and from then on what the dearest judged session has cost (on
-17 Nov 2026 the two judged sessions cost 0.06 and 0.03 USD). remaining = total_usd - spent, or if lower the wallet figure passed in
+17 Nov 2026 the two judged sessions cost 0.06 and 0.03 USD). The share is that of the judge the profile asks
+(`Budget(judge=...)`): only the sessions that judge has judged count, by the model and provider on their
+ledger lines, and for a judge asked at Anthropic the estimate is worked out from its prices (`judge_estimate`;
+2.48 USD for Claude Opus 5.5 at the demo profile's cap). What a cheaper judge cost says nothing about a dearer
+one. remaining = total_usd - spent, or if lower the wallet figure passed in
 minus TokenRouter spending since this run started; less floor_usd. A stage starts only if the projections of
 its unfinished sessions sum to at most `remaining`; each session start, and each infra rerun, rechecks its
 own, with what the sessions in flight are still expected to cost held back. A session that has already
@@ -74,11 +78,15 @@ from typing import Awaitable, Callable
 import httpx
 
 from rj import pricing, schema
+from rj.grade.judge import ANTHROPIC, DEFAULT_MAX_TOKENS, JudgeError, judge_model, judge_route
 from rj.hr import HRError
 from rj.runner.manifest import append_lines, read_json, read_lines, write_json
 
 LEDGER, MEASURED = "ledger.jsonl", "measured.json"
-JUDGE_USD = 0.35                            # per session, the judge's calls on a transcript at the cap (plan section 9, an estimate)
+JUDGE_USD = 0.35                            # per session, the judge's calls on a transcript at the cap (plan section 9, an estimate
+                                            # made for TokenRouter's judge; `judge_usd` goes by the ledger once a session is judged)
+JUDGE_CHARS, JUDGE_CHARS_PER_TOKEN = 600_000, 3     # `judge_estimate`: the cap where the profile sets none; a token, read the dearer way
+JUDGE_OUTPUT_TOKENS = 8_000                 # `judge_estimate`: per call of an Anthropic judge, its reply and the thinking billed with it
 TOKENROUTER = "tokenrouter"
 TR_DEFAULT_BASE = "https://api.tokenrouter.com/v1"
 TR_USAGE_PATH = "/dashboard/billing/usage"  # {"total_usage": 9.47}, in cents, for the key that asks
@@ -131,6 +139,43 @@ def same_service(entry, service: str | None) -> bool:
     """True for an entry stamped with this service, and for one that carries no stamp."""
     stamp = entry.get("service") if isinstance(entry, dict) else None
     return stamp is None or service is None or stamp == service
+
+
+def judge_estimate(judge: dict | None, prices: dict) -> float:
+    """What the judge's calls on one session are expected to cost, in USD, before the ledger holds a session that
+    judge has judged. `judge` is the profile's judge block.
+
+    JUDGE_USD for TokenRouter's judge and the stub's, and where no block is given. For a judge asked at Anthropic
+    the figure is worked out from its prices.yaml entry and the block, for a transcript at the cap
+    (`max_input_chars`, three characters to a token): the first scoring run writes its prompt to the cache where
+    a second run follows (else it is plain input), every further run reads it, the guess call sends it once more
+    as plain input, and every call, the fit call among them, is allowed JUDGE_OUTPUT_TOKENS of output (the
+    thinking is billed as output), or `max_tokens` where that is less. The fit call's own prompt is short and is
+    not counted. An estimate on the dear side: a transcript is rarely near the cap."""
+    judge = judge or {}
+    try:
+        if judge_route(judge)[0] != ANTHROPIC:
+            return JUDGE_USD
+        price = pricing.price_from_yaml(judge_model(judge, prices)[1])
+    except JudgeError:                                  # a judge that cannot be asked as the block stands
+        return JUDGE_USD
+    runs, guess = max(1, int(judge.get("runs", 2))), bool(judge.get("guess_call"))
+    tokens = int(judge.get("max_input_chars") or JUDGE_CHARS) / JUDGE_CHARS_PER_TOKEN
+    sent = tokens * ((price.cache_write if runs > 1 else price.input) + (runs - 1) * price.cache_read + (price.input if guess else 0.0))
+    got = (runs + guess + 1) * min(JUDGE_OUTPUT_TOKENS, int(judge.get("max_tokens") or DEFAULT_MAX_TOKENS)) * price.output
+    return (sent + got) / 1_000_000
+
+
+def judge_lines(judge: dict | None, prices: dict) -> tuple[str, str] | None:
+    """(model, provider) as the ledger's judge lines name the judge a judge block asks for. None where no block is
+    given, for the stub's judge (it is ledgered nowhere) and for a block that names no judge that can be asked:
+    then every judge line counts, as it did when there was one judge."""
+    if not judge or judge.get("stub"):
+        return None
+    try:
+        return judge_model(judge, prices)[0], judge_route(judge)[0]
+    except JudgeError:
+        return None
 
 
 async def no_tr_usage() -> None:
@@ -212,9 +257,11 @@ class Ledger:
 
 class Budget:
     def __init__(self, cfg: dict, prices: dict, runs_dir: str | Path, *, run: str, wallet_usd: float | None = None,
-                 tr_usage: Callable[[], Awaitable[float | None]] | None = None, log: Callable[[str], None] | None = None):
+                 tr_usage: Callable[[], Awaitable[float | None]] | None = None, log: Callable[[str], None] | None = None,
+                 judge: dict | None = None):
         self.total, self.floor, self.rerun = float(cfg["total_usd"]), float(cfg["floor_usd"]), float(cfg["rerun_factor"])
         self.prices, self.runs_dir, self.run = prices, Path(runs_dir), run
+        self.judge = judge                          # the profile's judge block: whose share `judge_usd` gives
         self.wallet = None if wallet_usd is None else float(wallet_usd)
         self.ledger = Ledger(self.runs_dir / LEDGER)
         self.model_map: dict[str, str] = {}
@@ -298,17 +345,23 @@ class Budget:
     def judge_usd(self) -> tuple[float, str]:
         """(the judge's share of a session's projection in USD, where the figure is from).
 
-        "estimate": JUDGE_USD, while this service's ledger holds no judged session. "ledger": what the dearest
-        judged session has cost, all its judge lines together (a session judged in two passes has two). Lines
-        that name no session (an estimate for calls that left no judge.json) are left out. Read once per
-        process: `rj judge` is another process, and the next call of the runner sees what it ledgered."""
+        "estimate": `judge_estimate` (JUDGE_USD for TokenRouter's judge), while this service's ledger holds no
+        session judged by the judge the profile asks. "ledger": what the dearest session that judge has judged
+        cost, all its judge lines together (a session judged in two passes has two). A line of another judge
+        (another model, or another provider) is left out: a session that TokenRouter's judge read for 0.06 USD
+        says nothing of what Claude Opus 5.5 costs. So are lines that name no session (calls that left no
+        judge.json). Without a judge block (`Budget(judge=...)`), and for the stub's judge, every judge line
+        counts. Read once per process: `rj judge` is another process, and the next call of the runner sees what
+        it ledgered."""
         if self._judge is None:
+            who = judge_lines(self.judge, self.prices)
             per: dict[tuple, float] = {}
             for e in self.ledger.mine():
-                if e.get("kind") == "judge" and e.get("session") and not e.get("flag"):
+                if e.get("kind") == "judge" and e.get("session") and not e.get("flag") \
+                        and (who is None or (e.get("model"), e.get("provider")) == who):
                     per[e.get("run"), e["session"]] = per.get((e.get("run"), e["session"]), 0.0) + _usd(e)
             dearest = max(per.values(), default=0.0)
-            self._judge = (dearest, "ledger") if dearest > 0 else (JUDGE_USD, "estimate")
+            self._judge = (dearest, "ledger") if dearest > 0 else (judge_estimate(self.judge, self.prices), "estimate")
         return self._judge
 
     def projection(self, row: dict) -> float:

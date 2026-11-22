@@ -21,7 +21,11 @@ The checks (plan section 2's table; what the real service showed on 17 Nov 2026 
     2  GET /v1/integrations: the profile's connection is listed and every row's model maps to a connection.
        The payer is recorded per row; rows may have different payers (TokenRouter, Anthropic, OpenAI).
     3  TokenRouter itself: GET {TR_BASE_URL}/models with TR_API_KEY, the public catalogue (/api/pricing) within
-       2% of prices.yaml for every model TokenRouter is paid for, the judge's model listed; the credit's expiry
+       2% of prices.yaml for every model TokenRouter is paid for, the judge's model listed; the credit's expiry.
+       A judge asked at Anthropic (`judge.provider: anthropic`) is not TokenRouter's to list or to price: for it the
+       check says whether ANTHROPIC_API_KEY is set, and Anthropic is not called. The model that writes the adaptive
+       answers (`adaptive.model`, where `adaptive.enabled`) is paid on TokenRouter whoever the judge is: it is
+       held to the list and to the catalogue as the judge's is, by its entry under `judge` in prices.yaml
     5  a "Reply READY." turn completes with usage, and the provider was billed: TokenRouter's usage figure rose
        (read at {TR_BASE_URL}/dashboard/billing/usage, in cents), or the owner saw the usage log
     6  the served model is the row's model; it becomes the row's pin. No served string (Codex): no pin
@@ -80,6 +84,7 @@ import httpx
 
 from rj import pricing, schema
 from rj.grade import trace
+from rj.grade.judge import ANTHROPIC, ANTHROPIC_KEY, JudgeError, judge_path, judge_route
 from rj.hr import HRClient, HRError
 from rj.runner import stops
 from rj.runner.budget import (TOKENROUTER, Budget, current_service, fetch_tr_usage, is_loopback, no_tr_usage, now,
@@ -543,7 +548,12 @@ async def free(cfg: dict, doc: dict, scope: list[dict], *, client: HRClient, pri
                log: Callable[[str], None] = print) -> list[str]:
     """Checks 1 to 3 on the rows in `scope`, written into `doc`. Returns the ids of the checks that ran."""
     account, stub = doc["account"], all(r["base"] == STUB_BASE for r in scope)
-    account["judge_path"] = str((cfg.get("judge") or {}).get("path") or "/chat/completions")
+    judge, unknown_judge = cfg.get("judge") or {}, ""
+    try:
+        direct = judge_route(judge)[0] == ANTHROPIC     # asked at Anthropic through its SDK, not at TokenRouter
+        account["judge_path"] = judge_path(judge)
+    except JudgeError as e:                             # a provider the judge does not know: said under check 3
+        direct, unknown_judge, account["judge_path"] = False, str(e), None
 
     # ---- 1: the HarnessRouter key works; the service lists our bases and models
     log("CHECK 1: the HarnessRouter key works; the service lists our bases and models")
@@ -636,15 +646,27 @@ async def free(cfg: dict, doc: dict, scope: list[dict], *, client: HRClient, pri
     elif not key and not is_loopback(base):
         doc["checks"]["3"] = verdict("skipped", f"TR_API_KEY is not set: TokenRouter was not asked; {wallet}")
     else:
-        problems, unknown, notes = [], [], []
-        judge = cfg.get("judge") or {}
+        problems, unknown, notes = [unknown_judge] if unknown_judge else [], [], []
         real = [r for r in scope if r["base"] != STUB_BASE]         # a stub persona is no model of TokenRouter's
         on_tr = [r for r in real if (doc["rows"].get(r["id"]) or {}).get("provider") in (TOKENROUTER, None)]
         needed = {r["model"]: prices["tokenrouter"][r["model"]] for r in on_tr if r["model"] in prices["tokenrouter"]}
         for r in real:
             if r["model"] not in prices["tokenrouter"]:
                 problems.append(f"row {r['id']}: prices.yaml has no entry for {r['model']!r}; the cost guard refuses such a row")
-        judges = {name: prices["judge"][name] for name in (judge.get("model"), judge.get("fallback_model")) if name in prices["judge"]}
+        judges = {} if direct else {name: prices["judge"][name] for name in (judge.get("model"), judge.get("fallback_model"))
+                                    if name in prices["judge"]}
+        if direct:                                      # nothing is sent to Anthropic to try the key: that it is set is all that is said
+            held = bool((os.environ.get(ANTHROPIC_KEY) or "").strip())
+            said = f"the judge ({judge.get('model')}) is asked at Anthropic, not at TokenRouter: {ANTHROPIC_KEY} is "
+            (notes if held else problems).append(said + ("set; no call was made to try it" if held else "not set"))
+        adaptive = cfg.get("adaptive") or {}            # its writer is asked on TokenRouter whoever the judge is, and priced with the judges
+        pen, writer = adaptive.get("model") if adaptive.get("enabled") and not adaptive.get("stub") else None, {}
+        if pen is None or (not direct and pen in (judge.get("model"), judge.get("fallback_model"))):
+            pass                                        # no writer to ask, or its model is the judge's, which is held below
+        elif pen in prices["judge"]:
+            writer = {pen: prices["judge"][pen]}
+        else:
+            problems.append(f"prices.yaml has no entry under `judge` for the adaptive writer's model {pen!r}")
         async with httpx.AsyncClient(transport=transport, timeout=40.0, follow_redirects=False) as http:
             status, listing, wrong = await _get(http, f"{base}/models", key)
             raw.save("tr_models", listing)
@@ -657,7 +679,9 @@ async def free(cfg: dict, doc: dict, scope: list[dict], *, client: HRClient, pri
                              "TokenRouter is paid for here" if needed else "; no row covered is paid on TokenRouter at a price of prices.yaml"))
                 problems += [f"TokenRouter does not list {m}" for m in missing]
                 first = judge.get("model")
-                if first not in judges:
+                if direct:                              # not TokenRouter's to list: said above
+                    pass
+                elif first not in judges:
                     problems.append(f"prices.yaml has no entry for the judge model {first!r}")
                 elif judges[first]["slug"] in slugs:
                     notes.append(f"the judge's model {judges[first]['slug']} is listed")
@@ -665,6 +689,9 @@ async def free(cfg: dict, doc: dict, scope: list[dict], *, client: HRClient, pri
                     spare = judges.get(judge.get("fallback_model"))
                     problems.append(f"the judge's model {judges[first]['slug']} is not listed"
                                     + (f"; its fallback {spare['slug']} is" if spare and spare["slug"] in slugs else "; nor is a fallback"))
+                for entry in writer.values():
+                    (notes if entry["slug"] in slugs else problems).append(
+                        f"the adaptive writer's model {entry['slug']} is " + ("listed" if entry["slug"] in slugs else "not listed"))
             status, catalogue, wrong = await _get(http, f"{tr_root(base)}/api/pricing", None)
             raw.save("tr_pricing", catalogue)
             if status != 200 or not isinstance(catalogue, dict):
@@ -672,7 +699,7 @@ async def free(cfg: dict, doc: dict, scope: list[dict], *, client: HRClient, pri
             else:
                 listed = {r.get("model_name"): r for r in catalogue.get("data") or [] if isinstance(r, dict)}
                 worst = 0.0
-                for model, entry in {**needed, **judges}.items():
+                for model, entry in {**needed, **judges, **writer}.items():
                     found = listed.get(entry["slug"])
                     if not found:
                         problems.append(f"{entry['slug']} is missing from today's catalogue")

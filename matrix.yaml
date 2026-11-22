@@ -11,3 +11,5 @@
 - {id: qwen-37max,   base: qwen,        model: qwen3.7-max,       side: chinese,  role: reserve}
 - {id: dsh-v4pro,    base: dsh,         model: deepseek-v4-pro,   side: chinese,  role: reserve}
 - {id: codex-56terra, base: codex,       model: gpt-5.6-terra,     side: american, role: reserve}   # on an OpenAI-compatible connection of its own, not on TokenRouter
+- {id: cc-opus55,    base: claude-code, model: claude-opus-5.5,   side: american, role: optional}   # profile highend
+- {id: codex-62sol,  base: codex,       model: gpt-6.2-sol,       side: american, role: optional}   # profile highend

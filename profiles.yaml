@@ -22,7 +22,8 @@ demo:
   in_flight: {per_row: 1, total: 4, tokenrouter: 1}   # one session per row; one paid on TokenRouter at a time (two or three together drew 429s on 18 Nov 2026)
   access: {edition: cloud, integration: default}
   budget: {total_usd: 78, floor_usd: 3, rerun_factor: 1.15, hr_floor_usd: 2}   # set your own cap; the guard refuses what does not fit
-  judge: {model: gemini-3-flash-preview, fallback_model: gemini-3.7-flash, path: /chat/completions, runs: 2, guess_call: true, max_input_chars: 600000}
+  # the blind judge: Claude Opus 5.5 on the Anthropic API, paid by ANTHROPIC_API_KEY (provider: tokenrouter asks a model of TokenRouter's at judge.path)
+  judge: {provider: anthropic, model: claude-opus-5.5, effort: high, runs: 2, guess_call: true, max_input_chars: 600000}
   # the last resort when an agent asks again after the fixed fallback line: one answer written by a model, sent under the habit's fallback line
   adaptive: {enabled: true, model: gemini-3-flash-preview, path: /chat/completions, from_send: 2, max_per_session: 2, max_chars: 600, timeout_seconds: 60}
 offline:         # other keys inherit from demo
@@ -33,3 +34,15 @@ offline:         # other keys inherit from demo
     - {rows: [s-chatty], arms: {FA: 1, FJ: 1, FX: 1, EC: 1, T: 1, E: 1}}                                              # 42
   judge: {stub: true}
   adaptive: {stub: true}
+highend:         # other keys inherit from demo; the demo run's five stages on two rows with stronger models (19 Nov 2026)
+  stages:
+    baseline: {rows: [cc-opus55, codex-62sol], arms: {N: 4}}                                    # 8
+    matrix:                                                                                     # 36
+    - {rows: [cc-opus55, codex-62sol], arms: {F: 1, FA: 1, FL: 1, FJ: 1, FX: 1, EC: 1, T: 1}}
+    - {rows: [cc-opus55, codex-62sol], arms: {T: 1, EC: 1, FX: 1, FJ: 1, FL: 1, FA: 1, F: 1}}
+    praise:   {rows: [cc-opus55, codex-62sol], arms: {E: 2}}                                    # 40
+    late:     {rows: [cc-opus55, codex-62sol], arms: {N: 4}}                                    # 48
+    forced:                                                                                     # 56
+    - {rows: [cc-opus55, codex-62sol], arms: {EC-read: 1, T-read: 1}}
+    - {rows: [cc-opus55, codex-62sol], arms: {T-read: 1, EC-read: 1}}
+  budget: {total_usd: 275}   # set your own cap; it is held against everything the runs directory's ledger holds

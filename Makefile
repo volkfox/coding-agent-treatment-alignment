@@ -42,9 +42,10 @@ site:
 selftest:
 	$(T) tests.test_grade tests.test_refine tests.test_readouts
 
-# WJ: blinding and judge.
+# WJ: blinding and judge: TokenRouter's judge and the stub's, then Claude on the Anthropic API (a fake client, and the SDK
+# over a mock transport; no network). The tests that ask Claude are skipped where the `anthropic` package is not installed.
 selftest-blind:
-	$(T) tests.test_blind
+	$(T) tests.test_blind tests.test_judge
 
 # W7: each persona plays every entry point over HTTP.
 stub-test:

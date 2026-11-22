@@ -108,7 +108,9 @@ class Profile(Case):
         self.assertEqual(demo, {"enabled": True, "model": "gemini-3-flash-preview", "path": "/chat/completions", "from_send": 2,
                                 "max_per_session": 2, "max_chars": 600, "timeout_seconds": 60, "stub": False})
         self.assertEqual(offline, {**demo, "stub": True})
-        self.assertEqual(demo["model"], schema.load_profile("demo")["judge"]["model"], "the judge's route, the judge's model")
+        self.assertIn(demo["model"], schema.load_prices()["judge"], "priced with the judges: it is asked over the route TokenRouter's judge takes")
+        self.assertEqual(schema.load_profile("demo")["judge"].get("provider"), "anthropic",
+                         "the judge itself is asked at Anthropic; the writer stays where it was")
         self.assertEqual(demo["from_send"], script.load_scenario()["fallback"]["max_per_ep"],
                          "the fixed line first: only the last untoned reply of an entry point can be adaptive")
 

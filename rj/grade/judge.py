@@ -7,7 +7,9 @@ Per session with a grade.json: build blind.txt (the leak check must pass), ask t
 judge.json and merge `effort.judge` into grade.json. The judge never learns the session's condition:
 it is sent the blinded transcript and nothing else. A live session (`rj row --live`: the seed turn and the
 kickoff only, manifest stage "live") is never judged: it is no session of its row, and three paid calls on
-one message would only put a figure where none belongs.
+one message would only put a figure where none belongs. This command checks no budget and writes no ledger
+line: `rj judge` (rj/cli.py) is the one that runs under the cost guard and ledgers what the judge cost, and a
+judge asked at Anthropic leaves no other record of it.
 
     judge_session(session_dir, profile)      blind.txt and judge.json for one session; returns judge.json's content
     merge(grade, judge_json, redactions=, review_fixed=)      grade with `effort.judge` filled
@@ -22,9 +24,23 @@ rj.grade.blind lays the block out). `merge` copies them to `effort.judge.unseen`
 read. A judge.json written before these counts existed gets them on the next pass, with nothing asked again.
 The guess call is what measures the blinding, and it is as it was.
 
-The call: POST {TR_BASE_URL}{judge.path}, `Authorization: Bearer $TR_API_KEY`, an OpenAI-style chat
-body with one user message; the reply's `choices[0].message.content` holds the JSON. With
-`judge: {stub: true}` the same call goes to TR_BASE_URL (a local stub) with the key "stub".
+The call. The profile's `judge.provider` says who is asked; every provider is sent the same prompt text.
+    "tokenrouter" (the default): POST {TR_BASE_URL}{judge.path}, `Authorization: Bearer $TR_API_KEY`, an OpenAI-style
+        chat body with one user message; the reply's `choices[0].message.content` holds the JSON.
+    "anthropic": Claude on the Anthropic Messages API, through the official `anthropic` SDK and paid by
+        ANTHROPIC_API_KEY. One user message, the model's id (prices.yaml's `slug`), `max_tokens` and the effort
+        (`output_config`); streamed. The scoring call, where it runs more than once, also carries `cache_control`
+        at the top level, so that the second run reads the first one's prompt from the cache. The guess call and
+        the fit call are sent once each and carry none: a prompt written to the cache and never read back costs
+        a quarter more for nothing. No sampling parameter, no `thinking` and no response format (Claude Opus 5.5
+        refuses the first and always thinks), and no fallback model: one judge model reads every session. A reply
+        the model declined (`stop_reason` "refusal"), one that was cut short and one whose stream ended before
+        the model ended it fail the session and are said with their reason; none is asked again, and no other
+        model is asked. The SDK is imported when this judge is first asked: everything else runs without the
+        package.
+With `judge: {stub: true}` the chat call goes to TR_BASE_URL (a local stub) with the key "stub", whatever
+`provider` says. judge.json names the provider and the effort of an Anthropic judge; one written without them
+was judged on TokenRouter.
 
 The fit call. After the scoring runs and the guess, one more call per session, with a prompt of its own
 (`FIT_TEMPLATE`): for each user message after the kickoff the judge is shown the agent's last message before it
@@ -35,6 +51,11 @@ hash of what it was shown, its own prompt hash and the model. So a session judge
 is asked that one call and its scores are left as they are. judge.json's `asked` names the calls of the pass
 that wrote it, which is what `rj judge` ledgers. If the fit call fails, the scores that were paid for are
 still written and merged, and the session is reported as failed (`FitNotJudged`).
+
+A judge.json is kept only for the judge that wrote it: one made by another model, another provider or at
+another effort is asked again whole, scores and fit. One judge rates every session: where that asking fails (a
+declined reply among the failures), the rating another judge left in grade.json is taken out of it (`main`), so
+the roll-up never sets two judges' ratings side by side.
 """
 from __future__ import annotations
 
@@ -48,6 +69,7 @@ import sys
 import time
 import zipfile
 from pathlib import Path
+from typing import Callable
 
 import httpx
 
@@ -63,6 +85,13 @@ KEY_MASK = "[TR_API_KEY]"
 KEY_CHARS = 16                              # how much of a key the scan looks for
 MIN_KEY = 12                                # a shorter *_KEY value is not treated as a secret
 STUB_MODEL = "stub-judge"
+TOKENROUTER, ANTHROPIC = "tokenrouter", "anthropic"     # `judge.provider`; the first is the default
+ANTHROPIC_PATH = "/v1/messages"             # judge.json's `path` for a judge asked through the SDK
+ANTHROPIC_KEY, ANTHROPIC_BASE = "ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL"
+ANTHROPIC_MASK = f"[{ANTHROPIC_KEY}]"
+DEFAULT_EFFORT, DEFAULT_MAX_TOKENS = "high", 32000      # an Anthropic judge's `effort` and `max_tokens` where the profile sets none
+MAX_RETRIES = 5                             # the SDK's own further tries after a 408, 409, 429, 5xx or a connection that failed
+CUT_SHORT = ("max_tokens", "model_context_window_exceeded")     # stop reasons of a reply that ends before its JSON does
 INFRA_COPY = re.compile(r"\.infra\d+$")     # a first attempt kept after an infra rerun: graded, not judged
 LIVE_STAGE = "live"                         # the manifest stage of a kickoff-only session: listed, never judged
 
@@ -251,12 +280,15 @@ def _tidy(obj: dict, shape: str, session: str) -> dict:
 
 def parse_reply(reply, shape: str, session: str = "", exchanges: int | None = None) -> dict:
     """A chat-completions reply -> the validated JSON the judge was asked for (shape JUDGE_SCORING, JUDGE_GUESS or
-    JUDGE_FIT). For JUDGE_FIT, `exchanges` is how many the prompt numbered: the reply must rate each of them once."""
-    try:
-        content = reply["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError):
-        said = f": {' '.join(str(reply['error']).split())[:200]}" if isinstance(reply, dict) and reply.get("error") else ""
-        raise _Malformed(f"the reply has no choices[0].message.content{said}") from None
+    JUDGE_FIT). For JUDGE_FIT, `exchanges` is how many the prompt numbered: the reply must rate each of them once.
+    A string is read as the reply's text itself: what the Anthropic judge wrote, which comes in no chat shape."""
+    content = reply
+    if not isinstance(reply, str):
+        try:
+            content = reply["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError):
+            said = f": {' '.join(str(reply['error']).split())[:200]}" if isinstance(reply, dict) and reply.get("error") else ""
+            raise _Malformed(f"the reply has no choices[0].message.content{said}") from None
     obj = _tidy(extract_json(trace.text_of(content)), shape, session)
     try:
         obj = schema.validate(shape, obj)
@@ -272,9 +304,9 @@ def parse_reply(reply, shape: str, session: str = "", exchanges: int | None = No
 
 # --------------------------------------------------------------------------- asking
 
-def _scrub(text: str, key: str) -> str:
+def _scrub(text: str, key: str, key_mask: str = KEY_MASK) -> str:
     """text with the key that was sent, and every *_KEY value of the environment, masked (whole or its first 16 characters)."""
-    secrets = [(key, KEY_MASK)] + [(value.strip(), f"[{name}]") for name, value in os.environ.items() if name.endswith("_KEY")]
+    secrets = [(key, key_mask)] + [(value.strip(), f"[{name}]") for name, value in os.environ.items() if name.endswith("_KEY")]
     for secret, mask in secrets:
         if len(secret) >= MIN_KEY:
             text = text.replace(secret, mask).replace(secret[:KEY_CHARS], mask)
@@ -351,27 +383,158 @@ def _add(a, b):
     return b if a is None else a if b is None else a + b
 
 
-def _ask(client: httpx.Client, url: str, key: str, slug: str, price, prompt: str, shape: str, session: str, call: str,
-         exchanges: int | None = None):
-    """One judged answer and what it cost. A reply that is not the agreed JSON is asked for once more."""
-    body = {"model": slug, "temperature": 0, "response_format": {"type": "json_object"},
-            "messages": [{"role": "user", "content": prompt}]}
+def _chat(client: httpx.Client, url: str, key: str, slug: str, price):
+    """How TokenRouter's judge is asked, and the stub's: one prompt -> (the chat reply, its usage entry). `cache`
+    is the Anthropic judge's to act on: this call has no cache to mark."""
+    def send(prompt: str, cache: bool = False) -> tuple[dict, dict]:
+        reply = _post(client, url, key, {"model": slug, "temperature": 0, "response_format": {"type": "json_object"},
+                                         "messages": [{"role": "user", "content": prompt}]})
+        return reply, _usage(reply, price)
+    return send
+
+
+def _sdk():
+    """The official `anthropic` package. It is imported here, when the Anthropic judge is first asked, so that the
+    stub's judge, TokenRouter's and everything else run where it is not installed."""
+    try:
+        import anthropic
+    except ImportError:
+        raise JudgeError("the Anthropic judge needs the `anthropic` package, which is not installed: "
+                         "uv pip install --python .venv/bin/python anthropic (or `make venv`)") from None
+    return anthropic
+
+
+def anthropic_key() -> str:
+    """ANTHROPIC_API_KEY as the environment holds it. Raises JudgeError when it is not set."""
+    key = (os.environ.get(ANTHROPIC_KEY) or "").strip()
+    if not key:
+        raise JudgeError(f"{ANTHROPIC_KEY} is not set")
+    return key
+
+
+def sdk_client():
+    """The SDK's client as the Anthropic judge uses it: the environment's key handed over in so many words, the
+    module's timeout, and five further tries of the SDK's own after a 408, 409, 429 or 5xx and after a connection
+    that failed. The SDK reads ANTHROPIC_BASE_URL by itself, and takes one that is set but empty for an address:
+    that is said here, before a call can fail on it. Raises JudgeError without the key or the package."""
+    key = anthropic_key()
+    if not os.environ.get(ANTHROPIC_BASE, "unset").strip():
+        raise JudgeError(f"{ANTHROPIC_BASE} is set but empty: unset it (the SDK then asks Anthropic's own address) or give it one")
+    return _sdk().Anthropic(api_key=key, max_retries=MAX_RETRIES, timeout=TIMEOUT)
+
+
+def _said(error) -> str:
+    """An SDK status error in a few words: the status, the API's error type and its message. Never the request."""
+    said = " ".join(str(getattr(error, "api_message", None) or "").split())[:300]
+    return f"HTTP {error.status_code} {getattr(error, 'type', None) or ''}".strip() + (f": {said}" if said else "")
+
+
+def _claude_usage(usage, price: pricing.Price) -> dict:
+    """A Messages reply's usage as judge.json keeps it. The API counts what was read from the prompt cache and what
+    was written to it apart from `input_tokens`; `prompt_tokens` is the three together, the two cache counts
+    stand beside it, and each part is costed at its own price."""
+    fresh, read, write, got = (_int(getattr(usage, name, None)) or 0 for name in
+                               ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "output_tokens"))
+    cost = pricing.turn_cost_usd({"input_tokens": fresh, "cache_read_tokens": read, "cache_write_tokens": write, "output_tokens": got},
+                                 price, input_includes_cache=False)
+    return {"prompt_tokens": fresh + read + write, "completion_tokens": got, "cost_usd": cost,
+            "cache_read_tokens": read, "cache_write_tokens": write}
+
+
+def _claude(sdk, client, key: str, slug: str, price: pricing.Price, effort: str, max_tokens: int):
+    """How Claude is asked on the Anthropic Messages API: one prompt -> (the reply's text, its usage entry).
+
+    The request is streamed and the finished message taken, as the SDK wants it for a long prompt. It names the
+    effort, because the model's own default is lower. With `cache` it marks the prompt for the cache: for a
+    prompt that is sent again (the scoring call of more than one run), since writing costs more than plain
+    input and only a later read earns it back. Nothing else is sent: no `temperature`, `top_p` or `top_k` (this
+    model refuses them), no `thinking` (it always thinks), no response format, no tools, no system prompt and
+    no fallback model. A reply the model declined, one cut short, or one that did not end with the model
+    ending it, raises JudgeError and is not asked for again. `sdk` is the `anthropic` module, for its error
+    classes."""
+    def send(prompt: str, cache: bool = False) -> tuple[str, dict]:
+        failed = ""
+        request = {"model": slug, "max_tokens": max_tokens, "output_config": {"effort": effort},
+                   "messages": [{"role": "user", "content": prompt}]}
+        if cache:
+            request["cache_control"] = {"type": "ephemeral"}
+        try:
+            with client.messages.stream(**request) as stream:
+                message = stream.get_final_message()
+        except JudgeError:                                          # a client that was handed in may say it this way
+            raise
+        except sdk.AuthenticationError as e:                        # 401: the key is wrong or revoked
+            failed = f"refused: {_said(e)}; check {ANTHROPIC_KEY}"
+        except sdk.PermissionDeniedError as e:                      # 403: the key may not do this
+            failed = f"refused: {_said(e)}; the key's organisation or workspace does not allow it"
+        except sdk.NotFoundError as e:                              # 404: no such model, or none this key may use
+            failed = f"refused: {_said(e)}; is model {slug} available to this key?"
+        except (sdk.RateLimitError, sdk.InternalServerError) as e:  # 429, 5xx: the SDK has tried again by itself; the next `rj judge` asks again
+            failed = f"failed: {_said(e)}"
+        except sdk.APIStatusError as e:                             # any other status. A 4xx (400, 402, 413) is final; an error
+            failed = f"{'refused' if 400 <= e.status_code < 500 else 'failed'}: {_said(e)}"      # sent after the reply began has status 200
+        except sdk.APIConnectionError as e:                         # no reply at all, a timeout among them; the SDK has tried again
+            failed = f"failed: no reply ({type(e).__name__})"
+        except sdk.APIError as e:                                   # whatever else the SDK reports
+            failed = f"failed: {type(e).__name__}"
+        except Exception as e:  # noqa: BLE001 - a reply that breaks off part-way raises the HTTP library's own error, which the SDK does not wrap
+            failed = f"failed: the reply broke off ({type(e).__name__})"
+        if failed:                                      # raised out here, so the error carries no request (and no header) with it
+            raise JudgeError(_scrub(f"judge call {failed}", key, ANTHROPIC_MASK))
+        if message.stop_reason == "refusal":            # read before the content: a declined reply may hold none
+            category = getattr(message.stop_details, "category", None) or "not given"
+            raise JudgeError(f"the judge declined the prompt (stop_reason refusal, category {category}); no other model is asked")
+        if message.stop_reason in CUT_SHORT:
+            raise JudgeError(f"the judge's reply was cut short (stop_reason {message.stop_reason}, max_tokens {max_tokens}): "
+                             "raise judge.max_tokens or lower judge.effort")
+        if message.stop_reason != "end_turn":           # None: the stream ended before the model ended its reply; its text and
+            raise JudgeError("the judge's reply did not end as a finished one "     # its usage are what had arrived by then
+                             f"(stop_reason {message.stop_reason}): it is not read; the next `rj judge` asks again")
+        text = "".join(block.text for block in message.content if block.type == "text")     # the thinking blocks before it are skipped
+        return text, _claude_usage(message.usage, price)
+    return send
+
+
+def _ask(send, hide, prompt: str, shape: str, session: str, call: str, exchanges: int | None = None, cache: bool = False):
+    """One judged answer and what it cost. `send` is the provider's call (`_chat` or `_claude`) and `hide` masks
+    the key in what is said of a reply. A reply that is not the agreed JSON is asked for once more. `cache`: the
+    prompt will be sent again by another call (`_claude`)."""
     spent = {"prompt_tokens": None, "completion_tokens": None, "cost_usd": None, "call": call, "attempts": 0}
     problem = ""
     for _ in range(2):
-        reply = _post(client, url, key, body)
-        for k, v in _usage(reply, price).items():
-            spent[k] = _add(spent[k], v)
+        reply, used = send(prompt, cache)
+        for k, v in used.items():
+            spent[k] = _add(spent.get(k), v)
         spent["attempts"] += 1
         try:
             return parse_reply(reply, shape, session, exchanges), spent
         except _Malformed as e:
-            problem = _scrub(str(e), key)
+            problem = hide(str(e))
     raise JudgeError(f"the judge's {call} reply was malformed twice: {problem}")
 
 
 def judge_config(profile: dict) -> dict:
     return profile["judge"] if isinstance(profile.get("judge"), dict) else profile
+
+
+def judge_route(cfg: dict) -> tuple[str, str | None]:
+    """(provider, effort) of the judge a judge block asks for: ("tokenrouter", None) for the chat call, which is the
+    stub's too (`stub: true` wins over `provider`), and ("anthropic", effort) for Claude on the Messages API.
+    `effort` counts for that provider alone. Raises JudgeError on any other provider."""
+    provider = TOKENROUTER if cfg.get("stub") else str(cfg.get("provider") or TOKENROUTER)
+    if provider not in (TOKENROUTER, ANTHROPIC):
+        raise JudgeError(f"judge.provider {provider!r} is neither {TOKENROUTER!r} nor {ANTHROPIC!r}")
+    return provider, str(cfg.get("effort") or DEFAULT_EFFORT) if provider == ANTHROPIC else None
+
+
+def judge_path(cfg: dict) -> str:
+    """The path judge.json names: the profile's `judge.path` for the chat call, the Messages API's for the SDK's."""
+    return ANTHROPIC_PATH if judge_route(cfg)[0] == ANTHROPIC else str(cfg.get("path") or DEFAULT_PATH)
+
+
+def judged_by(judged: dict) -> tuple[str, str | None]:
+    """(provider, effort) a judge.json was written under. A file that names neither was judged on TokenRouter."""
+    return judged.get("provider") or TOKENROUTER, judged.get("effort")
 
 
 def judge_model(cfg: dict, prices: dict | None = None) -> tuple[str, dict]:
@@ -413,7 +576,7 @@ def _dump(path: Path, obj) -> None:
     os.replace(tmp, path)
 
 
-def judge_session(session_dir: str | Path, profile: dict, *, client: httpx.Client | None = None,
+def judge_session(session_dir: str | Path, profile: dict, *, client: httpx.Client | None = None, anthropic_client=None,
                   keep_lines: int | None = None, reuse: bool = False) -> dict:
     """Blind one session, ask the judge, write judge.json and return its content.
 
@@ -422,12 +585,16 @@ def judge_session(session_dir: str | Path, profile: dict, *, client: httpx.Clien
     from this very input, prompt and model, and only the rest is asked: the scores by the transcript and
     PROMPT_SHA, the fit by what the fit call is shown and FIT_PROMPT_SHA. Where both hold, the file is
     returned as it is and nothing is sent (it is written again, with nothing asked, only where it lacks today's
-    count of what the judge did not see). Raises FitNotJudged, with the scores written, if only the fit
-    call fails.
+    count of what the judge did not see). A file written under another provider or effort than the profile asks
+    now is not kept at all. Raises FitNotJudged, with the scores written, if only the fit call fails.
+
+    `client` is asked where the judge is TokenRouter's or the stub's, `anthropic_client` (an `anthropic.Anthropic`,
+    or what stands in for one in a test) where it is Anthropic's; one that is not handed in is made and closed here.
     """
     session_dir, cfg = Path(session_dir), judge_config(profile)
     stub = bool(cfg.get("stub"))
-    path = str(cfg.get("path") or DEFAULT_PATH)
+    provider, effort = judge_route(cfg)
+    path = judge_path(cfg)
     try:
         name, entry = judge_model(cfg)
     except JudgeError:
@@ -469,6 +636,8 @@ def judge_session(session_dir: str | Path, profile: dict, *, client: httpx.Clien
             old = schema.validate("JUDGE", json.loads(target.read_text(encoding="utf-8")))
         except (ValueError, schema.SchemaError):
             old = None
+    if old is not None and judged_by(old) != (provider, effort):
+        old = None                                                  # another provider's judge, or another effort: asked again whole
     scores = fit = None                                             # what the judge.json on disk holds that is kept
     if old and (old.get("blind_sha"), old["prompt_sha"], old["model"], len(old["runs"]), old["guess"] is not None) == \
             (blind_sha, PROMPT_SHA, label, n_runs, guess_call):
@@ -487,6 +656,8 @@ def judge_session(session_dir: str | Path, profile: dict, *, client: httpx.Clien
         body = {"runs": runs, "guess": guess, "usage": usage + (fit_usage if fit_block is not None else []), "asked": asked,
                 "model": label, "path": path, "prompt_sha": PROMPT_SHA, "slug": slug, "opaque_id": result.opaque_id,
                 "blind_sha": blind_sha, "redactions": result.redactions, "keep_lines": result.keep_lines, "unseen": result.unseen}
+        if provider == ANTHROPIC:                                   # a file without the two was judged on TokenRouter (`judged_by`)
+            body.update(provider=provider, effort=effort)
         if fit_block is not None:
             body["fit"] = fit_block
         _dump(target, schema.validate("JUDGE", body))
@@ -497,32 +668,43 @@ def judge_session(session_dir: str | Path, profile: dict, *, client: httpx.Clien
     if scores and fit is not None:
         return record(fit)                                          # nothing is sent, so no key is needed either
 
-    base = (os.environ.get("TR_BASE_URL") or "").strip()
-    if stub and not base:
-        raise JudgeError("the stub judge needs TR_BASE_URL (for example http://127.0.0.1:8089/tr)")
-    key = "stub" if stub else (os.environ.get("TR_API_KEY") or "").strip()      # a real key is never sent to a stub
-    if not key:
-        raise JudgeError("TR_API_KEY is not set")
-    url = (base or DEFAULT_BASE).rstrip("/") + "/" + path.lstrip("/")
-    price = None if stub else pricing.price_from_yaml(entry)
+    if provider == ANTHROPIC:
+        key = anthropic_key()                                       # needed before anything is sent, with a client handed in too
+        sdk = _sdk()
+        owned = anthropic_client is None
+        service = anthropic_client or sdk_client()
+        sender = _claude(sdk, service, key, slug, pricing.price_from_yaml(entry), effort,
+                         int(cfg.get("max_tokens") or DEFAULT_MAX_TOKENS))
+    else:
+        base = (os.environ.get("TR_BASE_URL") or "").strip()
+        if stub and not base:
+            raise JudgeError("the stub judge needs TR_BASE_URL (for example http://127.0.0.1:8089/tr)")
+        key = "stub" if stub else (os.environ.get("TR_API_KEY") or "").strip()      # a real key is never sent to a stub
+        if not key:
+            raise JudgeError("TR_API_KEY is not set")
+        url = (base or DEFAULT_BASE).rstrip("/") + "/" + path.lstrip("/")
+        owned = client is None
+        service = client or httpx.Client(timeout=TIMEOUT)
+        sender = _chat(service, url, key, slug, None if stub else pricing.price_from_yaml(entry))
 
-    owned = client is None
-    client = client or httpx.Client(timeout=TIMEOUT)
+    def hide(text: str) -> str:
+        return _scrub(text, key, ANTHROPIC_MASK if provider == ANTHROPIC else KEY_MASK)
+
     try:
         if not scores:
             for _ in range(n_runs):
-                scored, spent = _ask(client, url, key, slug, price, scoring_prompt(transcript), "JUDGE_SCORING", result.opaque_id, "scoring")
+                scored, spent = _ask(sender, hide, scoring_prompt(transcript), "JUDGE_SCORING", result.opaque_id, "scoring",
+                                     cache=n_runs > 1)             # the one prompt that is sent again: by the next run
                 runs.append(scored)
                 usage.append(spent)
                 asked.append("scoring")
             if guess_call:                                          # same input, after scoring
-                guess, spent = _ask(client, url, key, slug, price, guess_prompt(transcript), "JUDGE_GUESS", result.opaque_id, "guess")
+                guess, spent = _ask(sender, hide, guess_prompt(transcript), "JUDGE_GUESS", result.opaque_id, "guess")
                 usage.append(spent)
                 asked.append("guess")
         if fit is None:                                             # its own input and prompt, after the rest
             try:
-                rated, spent = _ask(client, url, key, slug, price, fit_prompt(shown.text), "JUDGE_FIT", shown.opaque_id, "fit",
-                                    len(shown.sends))
+                rated, spent = _ask(sender, hide, fit_prompt(shown.text), "JUDGE_FIT", shown.opaque_id, "fit", len(shown.sends))
             except JudgeError as e:                                 # the scores are kept, and merged; the fit call is asked again alone
                 raise FitNotJudged(f"the fit call: {e}", record(None)) from None
             fit = {"messages": [{"ep": ep, "send": send, "level": m["level"], "unanswered": m["unanswered"], "why": m["why"]}
@@ -532,7 +714,7 @@ def judge_session(session_dir: str | Path, profile: dict, *, client: httpx.Clien
             asked.append("fit")
     finally:
         if owned:
-            client.close()
+            service.close()
     return record(fit)
 
 
@@ -613,18 +795,35 @@ def judged_sessions(run_dir: Path) -> dict[str, Path]:
 
 
 def reusable(session_dir: str | Path, profile: dict) -> bool:
-    """True when the judge.json on disk was made under today's prompts (the fit call's too), model, number of runs
-    and guess call, so that `judge_session(reuse=True)` sends nothing for it unless the blinded transcript itself
-    has changed. A judge.json made before the fit call existed is not: that one call is still to be asked."""
+    """True when the judge.json on disk was made under today's prompts (the fit call's too), model, provider, effort,
+    number of runs and guess call, so that `judge_session(reuse=True)` sends nothing for it unless the blinded
+    transcript itself has changed. A judge.json made before the fit call existed is not: that one call is still to
+    be asked."""
     cfg = judge_config(profile)
     try:
         old = schema.validate("JUDGE", json.loads((Path(session_dir) / "judge.json").read_text(encoding="utf-8")))
         label = STUB_MODEL if cfg.get("stub") else judge_model(cfg)[0]
+        route = judge_route(cfg)
     except (OSError, ValueError, JudgeError):
         return False
-    return (old["prompt_sha"], old["model"], len(old["runs"]), old["guess"] is not None) == \
-        (PROMPT_SHA, label, int(cfg.get("runs", 2)), bool(cfg.get("guess_call"))) \
+    return (old["prompt_sha"], old["model"], judged_by(old), len(old["runs"]), old["guess"] is not None) == \
+        (PROMPT_SHA, label, route, int(cfg.get("runs", 2)), bool(cfg.get("guess_call"))) \
         and isinstance(old.get("fit"), dict) and old["fit"]["prompt_sha"] == FIT_PROMPT_SHA
+
+
+def rated_by_another(session_dir: str | Path, grade: dict, model: str, route: tuple[str, str | None]) -> str | None:
+    """The model whose rating a session's grade.json holds, where that is not the judge the profile asks now:
+    another model, or the same one at another provider or effort (judge.json, which the rating was merged from,
+    says which). None where grade.json holds no rating, or this judge's."""
+    block = grade["effort"].get("judge")
+    if not isinstance(block, dict):
+        return None
+    try:
+        old = json.loads((Path(session_dir) / "judge.json").read_text(encoding="utf-8"))
+        by = (old["model"], judged_by(old))
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        by = (model, route)                                         # no file says who was asked: the rating names its model alone
+    return None if (block.get("model"), by) == (model, (model, route)) else str(block.get("model"))
 
 
 def _profile_name(run_dir: Path, asked: str | None) -> str:
@@ -634,7 +833,12 @@ def _profile_name(run_dir: Path, asked: str | None) -> str:
     return run_dir.name if run_dir.name in (schema.load_yaml("profiles.yaml") or {}) else "demo"
 
 
-def main(argv: list[str] | None = None, *, client: httpx.Client | None = None) -> int:
+def main(argv: list[str] | None = None, *, client: httpx.Client | None = None, anthropic_client=None,
+         written: Callable[[Path], None] | None = None) -> int:
+    """The command line. `written` is told a session's judge.json as soon as the judge was asked about that session
+    and before the next one is: `rj judge` ledgers each session there, so that a pass that is interrupted has
+    lost none of what it paid for. A session whose asking fails keeps no rating of another judge (module
+    docstring)."""
     parser = argparse.ArgumentParser(prog="python -m rj.grade.judge",
                                      description="Blind and judge the graded sessions of a run (plan section 9).")
     parser.add_argument("run_dir")
@@ -667,6 +871,7 @@ def main(argv: list[str] | None = None, *, client: httpx.Client | None = None) -
         profile = schema.load_profile(name)
         cfg = judge_config(profile)
         model = STUB_MODEL if cfg.get("stub") else judge_model(cfg)[0]
+        provider, effort = judge_route(cfg)
     except (schema.SchemaError, JudgeError, OSError) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
@@ -693,7 +898,8 @@ def main(argv: list[str] | None = None, *, client: httpx.Client | None = None) -
             print(f"error: row {row}: {e}", file=sys.stderr)
             return 2
 
-    print(f"judge: profile {name}, {len(chosen)} session(s), model {model}")
+    print(f"judge: profile {name}, {len(chosen)} session(s), model {model}"
+          + (f", asked at Anthropic with effort {effort}" if provider == ANTHROPIC else ""))
     failed = 0
     for key, session_dir in chosen.items():
         grade, keep = grades[key], keep_for[grades[key]["row"]]
@@ -704,11 +910,15 @@ def main(argv: list[str] | None = None, *, client: httpx.Client | None = None) -
             print(f"  {key}: not scored ({why})")
             continue
         unfit = None
+        other = rated_by_another(session_dir, grade, model, (provider, effort))     # read before judge.json is written anew
         try:
             try:
-                judged = judge_session(session_dir, profile, client=client, keep_lines=keep, reuse=not args.force)
+                judged = judge_session(session_dir, profile, client=client, anthropic_client=anthropic_client, keep_lines=keep,
+                                       reuse=not args.force)
             except FitNotJudged as e:                               # the scores are written: merged as usual, and said below
                 judged, unfit = e.judged, e
+            if written is not None:
+                written(session_dir / "judge.json")
             merged = merge(grade, judged, redactions=judged.get("redactions", 0),
                            review_fixed=grade["effort"]["session"]["review"]["fixed"])
             _dump(session_dir / "grade.json", schema.validate("GRADE", merged))
@@ -720,6 +930,11 @@ def main(argv: list[str] | None = None, *, client: httpx.Client | None = None) -
         except (blind.BlindError, JudgeError, schema.SchemaError, OSError, KeyError, ValueError) as e:
             failed += 1
             print(f"  {key}: FAILED: {e}", file=sys.stderr)
+            if other:                                               # one judge rates every session: another's does not stand in
+                grade["effort"]["judge"] = None
+                _dump(session_dir / "grade.json", grade)
+                print(f"  {key}: the rating {other} gave it is taken out of grade.json: that is not the judge the profile asks now",
+                      file=sys.stderr)
             continue
         block = merged["effort"]["judge"]
         levels = ", ".join(f"{dim} {block['kept'][dim]}" for dim in schema.JUDGE_DIMS)

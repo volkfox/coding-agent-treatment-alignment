@@ -364,8 +364,13 @@ JUDGE_FIT = {     # the judge's reply to the fit call: one object per exchange, 
 }
 JUDGE = {
     "runs": ListOf(JUDGE_SCORING), "guess": N(JUDGE_GUESS),
-    "usage": ListOf({"prompt_tokens": N(int), "completion_tokens": N(int), "cost_usd": N(NUM)}),
+    # `prompt_tokens` is everything that went in. An Anthropic judge's entry also says how much of it was read from the
+    # prompt cache and how much was written to it (each has its own price); other entries hold neither count.
+    "usage": ListOf({"prompt_tokens": N(int), "completion_tokens": N(int), "cost_usd": N(NUM),
+                     "cache_read_tokens": Opt(N(int)), "cache_write_tokens": Opt(N(int))}),
     "model": str, "path": str, "prompt_sha": str,
+    # Who was asked, and at which effort: written for an Anthropic judge. A file without them was judged on TokenRouter.
+    "provider": Opt(str), "effort": Opt(N(str)),
     "unseen": Opt(N(UNSEEN)),               # what blinding kept from the scoring and guess calls
     # The fit call's result, per user message after the kickoff; `input_sha` is the hash of what the judge was shown.
     # Absent in a judge.json written before the fit call existed, or where the call failed: it is then asked alone.

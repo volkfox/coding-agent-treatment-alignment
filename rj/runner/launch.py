@@ -249,7 +249,7 @@ async def open_context(cfg: dict, *, run: str, runs_dir: str | Path, client: HRC
     """
     runs = manifest.resolve_runs(runs_dir)
     budget = Budget(cfg["budget"], prices if prices is not None else schema.load_prices(), runs, run=run,
-                    wallet_usd=tr_wallet_usd, tr_usage=tr_usage, log=log)
+                    wallet_usd=tr_wallet_usd, tr_usage=tr_usage, log=log, judge=cfg.get("judge"))
     await budget.start(client)
     return machine.Context(client=client, run=run, run_dir=runs / run, runs_dir=runs, profile=cfg,
                            scenario=script.load_scenario(), grader=schema.load_grader(), budget=budget,

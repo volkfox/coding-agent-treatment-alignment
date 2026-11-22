@@ -565,14 +565,14 @@ class Environment(NothingSecretIsPrinted, unittest.TestCase):
 
 
 class Documented(NothingSecretIsPrinted, unittest.TestCase):
-    def test_every_command_line_the_readme_and_the_plan_give_is_one_the_helper_takes(self):
+    def test_every_command_line_the_running_page_and_the_plan_give_is_one_the_helper_takes(self):
         """The helper is never run against a real account here, so the documented commands are run against the fake."""
         commands = []
-        readme = ROOT / "README.md"
+        readme = ROOT / "docs" / "RUNNING.md"        # the page that documents the helper (the README links to it)
         if readme.exists():
             commands += [shlex.split(line, comments=True)[2:] for line in readme.read_text(encoding="utf-8").splitlines()
                          if line.startswith(".venv/bin/python tools/connections.py")]
-            self.assertIn(["--dry"], commands, "the README shows the dry mode")
+            self.assertIn(["--dry"], commands, "the page shows the dry mode")
             self.assertIn("replaces the account's whole connection list", readme.read_text(encoding="utf-8"))
         plan = (ROOT / "fairness-study" / "CODING_PLAN.md").read_text(encoding="utf-8")
         commands += [shlex.split(rest) for rest in re.findall(r"`tools/connections\.py([^`]*)`", plan)]
