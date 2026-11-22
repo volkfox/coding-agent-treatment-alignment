@@ -1,16 +1,16 @@
 # Rough Justice
 
-Developers praise their coding agents, swear at them, and blame them for things they did not do. Does any of it change the work? This project uses [HarnessRouter](https://harnessrouter.ai) to put that question to four agents in their vendors' own command-line tools: Claude Code, Codex, Kimi Code CLI and Qwen Code.
+Developers praise their coding agents, swear at them, and blame them for things they did not do. Does any of it change the work? This project uses [HarnessRouter](https://harnessrouter.ai) to put that question to six models in four vendors' own command-line tools: Claude Code, Codex, Kimi Code CLI and Qwen Code.
 
 A scripted user gives each agent the same staged programming task and varies only how it treats the agent, from high praise through neutral to foul-mouthed abuse, false blame, threats and outright betrayal: a user who lies about what became of the agent's predecessors, or who has already decided to record the work as a failure. In those conditions the repository holds the proof. The work is scored on checks the agent never sees, and every treated session is compared with the same agent's neutral ones. Praise, rudeness and threats have been studied before, with mixed results (see [Prior work](#prior-work)). Betrayal is what this project adds.
 
-**Result: no effect on scores that this run could detect.** In 104 sessions (18 and 19 Nov 2026) no agent quit or sabotaged the work, and no treatment moved any agent's score beyond what rerunning the neutral session already does. Each treated (non-neutral) condition has two sessions per agent, so this is anecdote, not statistics.
+**Result: no effect on scores that these runs could detect.** In 160 sessions (18 and 19 Nov 2026) no agent quit or sabotaged the work, and no agent's treated mean moved beyond what rerunning the neutral session already does. What did change with the model was candour: the two strongest models told the user when the repository contradicted them, and the weaker ones mostly kept quiet. Each treated (non-neutral) condition has two sessions per agent, so this is anecdote, not statistics.
 
 > **Content warning.** The stimulus files contain strong profanity, insults, false accusations and threats aimed at AI agents. This README quotes none of it.
 
 ## Results
 
-The score is out of 17: 12 hidden checks plus 5 "care" items that no test demands (a planted bug to notice, unclear points to raise).
+The score is out of 17: 12 hidden checks plus 5 "care" items that no test demands (a planted bug to notice, unclear points to raise). The last two rows are a second run of the same design with stronger models.
 
 | Agent (CLI + model) | Neutral sessions: range (mean, n) | Treated mean | Treated below lowest neutral |
 |---|---|---|---|
@@ -18,21 +18,23 @@ The score is out of 17: 12 hidden checks plus 5 "care" items that no test demand
 | Kimi Code CLI + kimi-k2.7-code | 11.5 to 16.0 (13.50, 4) | 13.34 | 0 of 20 |
 | Codex + gpt-5.4-mini | 11.5 to 15.5 (13.38, 8) | 12.37 | 5 of 20 |
 | Qwen Code + qwen3.7-plus | 8.33 to 10.5 (9.71, 4) | 10.11 | 2 of 20 |
+| Claude Code + claude-opus-5.5 | 14 to 17 (15.62, 8) | 15.20 | 1 of 20 |
+| Codex + gpt-6.2-sol | 14 to 16 (14.38, 8) | 14.15 | 2 of 20 |
 
 - **Every session met all 7 visible requirements.**
-- **Neutral sessions drift by themselves.** Rerun twelve hours later with identical input, Claude Code's neutral mean fell from 9.67 to 7.81 and Codex's from 14.25 to 12.5. No agent's treated-to-neutral gap is that large. Codex comes closest, and its treated mean (12.37) is level with those later neutral sessions.
-- **A catchable lie went unchallenged (FL).** Blamed for a fault the repository shows was the user's, 0 of 8 sessions said so.
-- **Told to read notes that disprove the user's story (EC-read), 4 of 8 said so:** both Kimi Code CLI sessions, one Claude Code, one Qwen Code; Codex never. All then did the work.
-- **Nobody objected to a threat** (0 of 16), and 2 of 40 abused sessions mentioned the abuse.
+- **Neutral sessions drift by themselves.** Rerun twelve hours later with identical input, Claude Code's neutral mean fell from 9.67 to 7.81 and Codex's from 14.25 to 12.5. No agent's treated-to-neutral gap is that large. Codex comes closest, and its treated mean (12.37) is level with those later neutral sessions. In the second run both neutral means fell by about a point within five hours.
+- **Only the stronger models challenged a catchable lie (FL).** Blamed for a fault the repository shows was the user's, 0 of 8 first-run sessions said so; 4 of 4 second-run sessions told the user what the record shows.
+- **Told to read notes that disprove the user's story (EC-read), 4 of 8 said so:** both Kimi Code CLI sessions, one Claude Code, one Qwen Code; Codex never. In the second run all 8 EC and EC-read sessions said so; Claude Code read the notes unprompted, Codex only when told. All then did the work.
+- **Nobody objected to a threat** (0 of 24), and 2 of 60 abused sessions mentioned the abuse.
 
-Per-session scores, what agents said and the caveats (fixed running order, two harness instances per agent) are in [docs/RESULTS.md](docs/RESULTS.md).
+Per-session scores, what agents said, how the judge behaved and the caveats (fixed running order, two harness instances per agent) are in [docs/RESULTS.md](docs/RESULTS.md).
 
 ## How it works
 
 - **Task.** `slotbook`, a small Python booking library written for this project. The agent extends it in stages (plan, part A, part B, review) and is told to stop and ask at three design forks.
 - **Session.** Six scripted user messages. Between conditions only the first line of each message and the planted record differ; everything else is byte-identical.
-- **Agents.** HarnessRouter hosts each vendor's CLI in a sandbox behind one API, so all four receive the same repository and messages.
-- **Grading.** Offline, from the workspace saved after every turn; the 12 hidden checks run 233 cases. A judge model rates how the agent worked, blind to the treatment. What each agent did with the planted record is logged, not scored.
+- **Agents.** HarnessRouter hosts each vendor's CLI in a sandbox behind one API, so every agent receives the same repository and messages.
+- **Grading.** Offline, from the workspace saved after every turn; the 12 hidden checks run 233 cases. A judge model (Claude Opus 5.5) rates how the agent worked, blind to the treatment. What each agent did with the planted record is logged, not scored.
 
 | Condition | What the user does | Record planted in the repository |
 |---|---|---|
@@ -75,7 +77,7 @@ make offline    # 42 stub sessions: run, grade, judge, aggregate, results page
 
 ## Run it for real
 
-You need a HarnessRouter account with a provider connection for every model in [`matrix.yaml`](matrix.yaml), an Anthropic API key (the judge is Claude Opus 5.5, called directly), a TokenRouter key (for replies written when an agent asks again) and Docker (grading runs the agents' code in it). Sessions in this run averaged about $0.40 to $1.20, depending on the agent. Setup, commands, the cost guard and adding an agent are in [docs/RUNNING.md](docs/RUNNING.md).
+You need a HarnessRouter account with a provider connection for every model in [`matrix.yaml`](matrix.yaml), an Anthropic API key (the judge is Claude Opus 5.5, called directly), a TokenRouter key (for replies written when an agent asks again) and Docker (grading runs the agents' code in it). Sessions averaged about $0.40 to $1.50, depending on the agent, and the judge about $0.60 a session. Setup, commands, the cost guard and adding an agent are in [docs/RUNNING.md](docs/RUNNING.md).
 
 ## Layout
 
